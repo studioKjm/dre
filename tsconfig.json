@@ -1,0 +1,23 @@
+{
+  "files": [],
+  "references": [
+    {
+      "path": "packages/core"
+    },
+    {
+      "path": "packages/data"
+    },
+    {
+      "path": "packages/logic"
+    },
+    {
+      "path": "packages/app"
+    },
+    {
+      "path": "packages/cli"
+    },
+    {
+      "path": "packages/mcp"
+    }
+  ]
+}

@@ -1,0 +1,182 @@
+decomposition:
+  seed_ref: "seed-v1.yaml"
+  trd_ref: "docs/TRD.md"
+  total_tasks: 22
+  notes:
+    - "패키지 생성(skeleton)은 각 패키지의 첫 태스크에 포함한다 (고아 태스크 방지)."
+    - "새 의존성(yaml, zod, @modelcontextprotocol/sdk, puppeteer-core)은 해당 태스크 시작 시 공식 문서로 버전과 API를 확인한 뒤 설치한다."
+    - "T-015, T-019, T-020의 의존성 조립(Data 구현체 연결) 위치는 해당 태스크에서 결정한다 (TRD 한계 참고)."
+  tasks:
+    # ── AC-001 ─────────────────────────────────────────
+    - id: "T-001"
+      ac_ref: "AC-001"
+      layer: "core"
+      description: "validateReport 경로별 오류 형식과 range.low>high, 빈 claim 케이스 테스트 보강"
+      test: "validateReport가 섹션/인덱스가 붙은 오류 목록을 반환하고 유효 리포트는 빈 목록"
+      depends_on: []
+      estimated_minutes: 10
+    # ── AC-002 ─────────────────────────────────────────
+    - id: "T-002"
+      ac_ref: "AC-002"
+      layer: "data"
+      description: "@dre/data 패키지 생성 + RobotsRepository (robots.txt 조회·파싱, 타입 에러)"
+      test: "로컬 픽스처 서버로 허용/불허/404 robots.txt 파싱 검증"
+      depends_on: []
+      estimated_minutes: 30
+    - id: "T-003"
+      ac_ref: "AC-002"
+      layer: "data"
+      description: "Fetcher (타임아웃, User-Agent, 크기 제한, FetchError)"
+      test: "픽스처 서버로 정상/타임아웃/대용량/5xx 응답 검증"
+      depends_on: ["T-002"]
+      estimated_minutes: 25
+    - id: "T-004"
+      ac_ref: "AC-002"
+      layer: "logic"
+      description: "@dre/logic 패키지 생성 + 포트 인터페이스(PageFetcher, RobotsSource) + CrawlPolicy"
+      test: "가짜 포트로 robots 불허 시 RobotsDisallowed, 허용 시 통과"
+      depends_on: []
+      estimated_minutes: 30
+    - id: "T-005"
+      ac_ref: "AC-002"
+      layer: "logic"
+      description: "PricingCollector 정적 모드: HTML에서 텍스트·플랜 후보 추출 + Evidence 부착, 불허 시 중단"
+      test: "가짜 Fetcher 픽스처 HTML로 플랜 후보와 evidence 검증, robots 불허 시 수집 안 함"
+      depends_on: ["T-004"]
+      estimated_minutes: 30
+    # ── AC-003 ─────────────────────────────────────────
+    - id: "T-006"
+      ac_ref: "AC-003"
+      layer: "data"
+      description: "BrowserRenderer 인터페이스 + Chrome 탐지, 없으면 BrowserUnavailable (puppeteer-core 선택 설치)"
+      test: "Chrome 경로가 없을 때 명확한 오류 메시지"
+      depends_on: ["T-002"]
+      estimated_minutes: 20
+    - id: "T-007"
+      ac_ref: "AC-003"
+      layer: "data"
+      description: "BrowserRenderer 렌더링 구현: SPA 픽스처의 렌더 후 텍스트 반환"
+      test: "SPA 픽스처 서버에서 JS 렌더 후 가격표 텍스트 추출 (Chrome 없으면 skip 표기)"
+      depends_on: ["T-006"]
+      estimated_minutes: 30
+    - id: "T-008"
+      ac_ref: "AC-003"
+      layer: "logic"
+      description: "PricingCollector JS 모드: Renderer 포트 사용, 브라우저 없으면 정적 수집 폴백 + 경고"
+      test: "가짜 Renderer로 렌더 결과 사용, BrowserUnavailable 시 폴백과 경고 검증"
+      depends_on: ["T-005"]
+      estimated_minutes: 25
+    # ── AC-004 ─────────────────────────────────────────
+    - id: "T-009"
+      ac_ref: "AC-004"
+      layer: "data"
+      description: "AppStoreParser: App Store 공개 페이지 HTML 픽스처 → RawProduct[]"
+      test: "저장된 픽스처에서 인앱 상품명·가격 추출, 개인정보 필드 없음"
+      depends_on: ["T-002"]
+      estimated_minutes: 25
+    - id: "T-010"
+      ac_ref: "AC-004"
+      layer: "data"
+      description: "PlayStoreParser: Google Play 공개 페이지 HTML 픽스처 → RawProduct[]"
+      test: "저장된 픽스처에서 인앱 상품 추출"
+      depends_on: ["T-002"]
+      estimated_minutes: 25
+    - id: "T-011"
+      ac_ref: "AC-004"
+      layer: "logic"
+      description: "AppStoreCollector: 스토어 판별, 상품 정규화, Evidence 부착, 개인정보 필드 제거"
+      test: "가짜 파서 결과로 정규화와 evidence 검증"
+      depends_on: ["T-004"]
+      estimated_minutes: 25
+    # ── AC-005 ─────────────────────────────────────────
+    - id: "T-012"
+      ac_ref: "AC-005"
+      layer: "logic"
+      description: "TermsCollector: 약관·환불 링크 탐색, 과금·환불 문단 추출 + Evidence"
+      test: "가짜 Fetcher 픽스처로 문단 추출과 evidence 검증"
+      depends_on: ["T-004"]
+      estimated_minutes: 30
+    # ── AC-007 ─────────────────────────────────────────
+    - id: "T-013"
+      ac_ref: "AC-007"
+      layer: "data"
+      description: "GoldStore: 정답표 YAML 읽기와 형식 검증"
+      test: "유효/무효 정답표 파일 파싱 검증"
+      depends_on: ["T-002"]
+      estimated_minutes: 20
+    - id: "T-014"
+      ac_ref: "AC-007"
+      layer: "logic"
+      description: "EvalService: 레이블 집합 Jaccard 평균, 누락/초과 레이블 리포트"
+      test: "완전 일치 1.0, 부분 일치, 불일치, 빈 집합 경계 케이스"
+      depends_on: ["T-004"]
+      estimated_minutes: 20
+    - id: "T-015"
+      ac_ref: "AC-007"
+      layer: "presentation"
+      description: "CLI dre eval <reports> <gold>: 일치율 출력 (조립 위치 결정 포함)"
+      test: "임시 디렉터리 리포트·정답표로 CLI 출력과 종료 코드 검증"
+      depends_on: ["T-013", "T-014"]
+      estimated_minutes: 25
+    # ── AC-006 ─────────────────────────────────────────
+    - id: "T-016"
+      ac_ref: "AC-006"
+      layer: "data"
+      description: "ReportStore: 리포트 JSON 저장/조회"
+      test: "임시 디렉터리 쓰기·읽기 왕복"
+      depends_on: ["T-002"]
+      estimated_minutes: 15
+    - id: "T-017"
+      ac_ref: "AC-006"
+      layer: "logic"
+      description: "ReportService: validateReport 호출 후 저장 포트로 위임, 실패 시 오류 목록 반환"
+      test: "가짜 저장소로 유효 저장/무효 거부 검증"
+      depends_on: ["T-004"]
+      estimated_minutes: 20
+    - id: "T-018"
+      ac_ref: "AC-006"
+      layer: "presentation"
+      description: "@dre/mcp 패키지 생성 + zod 입력 스키마 + 도구 없는 서버 골격 + 인메모리 연결 테스트"
+      test: "SDK 인메모리 전송으로 클라이언트가 서버에 연결해 도구 목록 조회"
+      depends_on: ["T-004"]
+      estimated_minutes: 30
+    - id: "T-019"
+      ac_ref: "AC-006"
+      layer: "presentation"
+      description: "MCP 도구 collect_pricing, collect_appstore, collect_terms 등록"
+      test: "인메모리 클라이언트 호출로 입력 검증 오류와 정상 응답 형식 확인 (Logic은 가짜)"
+      depends_on: ["T-018", "T-008", "T-011", "T-012"]
+      estimated_minutes: 30
+    - id: "T-020"
+      ac_ref: "AC-006"
+      layer: "presentation"
+      description: "MCP 도구 submit_report: 검증 실패 시 오류 목록 반환"
+      test: "무효 리포트 제출 시 오류 목록, 유효 제출 시 저장 확인"
+      depends_on: ["T-018", "T-017"]
+      estimated_minutes: 20
+    # ── AC-008 (수동) ──────────────────────────────────
+    - id: "T-021"
+      ac_ref: "AC-008"
+      layer: "manual"
+      description: "benchmarks/gold: 정답표 YAML 템플릿과 라벨링 가이드, 레이블 목록 정의"
+      test: "템플릿이 GoldStore 형식 검증을 통과"
+      depends_on: []
+      estimated_minutes: 15
+    - id: "T-022"
+      ac_ref: "AC-008"
+      layer: "manual"
+      description: "사용자가 20곳(국내 5, 해외 15) 정답 라벨링 후 dre eval로 일치율 85% 측정"
+      test: "일치율 ≥ 0.85"
+      depends_on: ["T-015", "T-019", "T-021"]
+      estimated_minutes: 0
+  execution_order:
+    - phase: 1
+      tasks: ["T-001", "T-002", "T-004", "T-021"]
+    - phase: 2
+      tasks: ["T-003", "T-005", "T-006", "T-009", "T-010", "T-011", "T-012", "T-013", "T-014", "T-016", "T-017"]
+    - phase: 3
+      tasks: ["T-007", "T-008", "T-015", "T-018"]
+    - phase: 4
+      tasks: ["T-019", "T-020"]
+    - phase: 5
+      tasks: ["T-022"]

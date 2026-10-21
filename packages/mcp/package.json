@@ -1,0 +1,17 @@
+{
+  "name": "@dre/mcp",
+  "version": "0.0.1",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "dependencies": {
+    "@dre/app": "0.0.1",
+    "@dre/core": "0.0.1",
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "zod": "^3.25.76"
+  },
+  "bin": {
+    "dre-mcp": "dist/main.js"
+  }
+}

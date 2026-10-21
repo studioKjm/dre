@@ -1,0 +1,37 @@
+date: "2026-10-20T00:00:00"
+topic: "DRE v0.1: 가격·수익모델 분석기 (MCP 전용)"
+mode: brownfield
+dimensions:
+  goal_clarity: 0.90
+  constraint_clarity: 0.85
+  success_criteria: 0.85
+  context_clarity: 0.80
+ambiguity_score: 0.14
+answers:
+  - question: "이번 루프의 대상 기능"
+    answer: "가격·수익모델 분석기"
+    dimension: goal
+  - question: "LLM 연결 방식"
+    answer: "MCP 전용 (DRE는 수집·구조화, 추론은 호출하는 에이전트)"
+    dimension: goal
+  - question: "성공 기준"
+    answer: "정답표 일치율 (20곳: 국내 5, 해외 15, 85% 이상)"
+    dimension: success
+  - question: "금지 제약"
+    answer: "약관 위반 스크래핑, 개인정보 수집, 유료 API 필수 의존, 단일 값 매출 추정"
+    dimension: constraints
+  - question: "분류 체계"
+    answer: "다중 레이블 태깅"
+    dimension: success
+  - question: "정답표 작성"
+    answer: "사용자가 직접 라벨링"
+    dimension: success
+  - question: "수집기 범위"
+    answer: "웹 가격 페이지, 앱스토어 인앱 상품, 이용약관·환불정책, JS 렌더링 페이지(브라우저)"
+    dimension: constraints
+decisions:
+  - "Apache-2.0, TypeScript, 오픈코어(코어 공개)"
+  - "claim 스키마: observed/inferred/estimated + evidence + confidence"
+assumptions_surfaced:
+  - "일치율 정의(레이블 집합 비교 방식: exact match vs F1)는 seed에서 확정 필요"
+  - "JS 렌더링 수집은 Chrome 계열 브라우저 의존; 헤드리스 라이브러리 선택은 TRD에서 결정"

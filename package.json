@@ -1,0 +1,14 @@
+{
+  "name": "dre-monorepo",
+  "private": true,
+  "workspaces": ["packages/*"],
+  "scripts": {
+    "build": "tsc -b",
+    "test": "npm run build && node --test $(find packages -path '*/dist/*' -name '*.test.js')"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "typescript": "^5.6.0"
+  },
+  "engines": { "node": ">=20" }
+}

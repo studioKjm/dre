@@ -1,0 +1,164 @@
+# Seed Specification v1
+# Generated: 2026-10-20
+# Source Interview: 2026-10-20-pricing-model-analyzer.yaml
+# WARNING: This file is immutable. To change, create a new version.
+
+version: 1
+created: "2026-10-20T00:00:00"
+interview_ref: "2026-10-20-pricing-model-analyzer.yaml"
+
+goal:
+  summary: "공개 가격·상품·약관 페이지에서 수익모델을 근거와 함께 다중 레이블로 분류하는 MCP 서버를 만든다."
+  detail: "DRE v0.1은 대상 URL의 가격 페이지, 앱스토어 인앱 상품, 이용약관·환불정책, JS 렌더링 페이지를 수집해 구조화된 증거 묶음을 MCP 도구로 제공한다. 수익모델 추론은 호출하는 에이전트가 수행하고, DRE는 그 결과를 claim 스키마(observed/inferred/estimated, evidence, confidence)로 검증해 리포트로 만든다. 성공은 사용자가 직접 라벨링한 20곳 정답표와의 일치율로 판단한다."
+  non_goals:
+    - "트래픽·매출·광고비·CPC·CTR·CVR·ROAS 추정 (v0.2 이후)"
+    - "추천/랭킹 알고리즘 분석"
+    - "호스팅 서비스, 모니터링, 대시보드 GUI"
+    - "LLM API를 DRE가 직접 호출하는 기능"
+
+constraints:
+  must:
+    - "모든 observed 주장에 evidence(url, retrievedAt)가 있어야 한다"
+    - "추정(estimated)은 단일 값이 아니라 범위와 가정을 포함하고 confidence는 high가 될 수 없다"
+    - "공개 소스와 에이전트 측 LLM만으로 동작한다 (유료 API 키 없이 실행 가능)"
+    - "수집은 robots.txt와 대상 사이트 약관을 준수한다"
+    - "Apache-2.0, TypeScript, Node >=20"
+  must_not:
+    - "약관·robots.txt를 위반하는 스크래핑을 하지 않는다"
+    - "개인정보(개별 계정, 리뷰어 신원 등)를 수집하지 않는다"
+    - "유료 API에 필수 의존하지 않는다"
+    - "매출을 단일 값으로 추정해 출력하지 않는다"
+  should:
+    - "설치부터 첫 리포트까지 10분 이내"
+    - "수집 결과에 스냅샷(원문 일부)을 저장해 재현 가능하게 한다"
+
+acceptance_criteria:
+  - id: "AC-001"
+    description: "validateReport는 근거 없는 observed, 범위·가정 없는 estimated, high 신뢰도의 estimated를 거부한다 (단위 테스트로 검증)"
+    verification: "automated"
+    priority: "must"
+    complexity: "low"
+  - id: "AC-002"
+    description: "웹 가격 페이지 수집기는 URL을 받아 정적 HTML 기준 텍스트·플랜 후보와 evidence(url, retrievedAt, snapshot)를 반환하고 robots.txt 불허 시 수집을 중단한다 (로컬 픽스처 서버 테스트)"
+    verification: "automated"
+    priority: "must"
+    complexity: "medium"
+  - id: "AC-003"
+    description: "JS 렌더링 수집기는 Chrome 계열 브라우저로 렌더링된 가격표 텍스트를 반환하며 브라우저가 없으면 명확한 오류로 실패한다 (픽스처 SPA 테스트)"
+    verification: "automated"
+    priority: "must"
+    complexity: "high"
+  - id: "AC-004"
+    description: "앱스토어 수집기는 App Store/Play 공개 페이지에서 인앱 상품명·가격 목록을 반환한다 (저장된 HTML 픽스처 테스트, 개인정보 필드 미수집)"
+    verification: "automated"
+    priority: "must"
+    complexity: "medium"
+  - id: "AC-005"
+    description: "약관·환불정책 수집기는 해당 페이지를 찾아 과금·환불 관련 문단과 evidence를 반환한다 (픽스처 테스트)"
+    verification: "automated"
+    priority: "should"
+    complexity: "medium"
+  - id: "AC-006"
+    description: "MCP 서버는 collect_pricing, collect_appstore, collect_terms, submit_report 도구를 노출하고, submit_report는 검증 실패 시 오류 목록을 반환한다 (MCP 클라이언트 통합 테스트)"
+    verification: "automated"
+    priority: "must"
+    complexity: "high"
+  - id: "AC-007"
+    description: "CLI의 dre eval은 정답표(YAML)와 리포트를 비교해 다중 레이블 일치율(Jaccard 또는 정의된 지표)을 계산해 출력한다 (단위 테스트)"
+    verification: "automated"
+    priority: "must"
+    complexity: "medium"
+  - id: "AC-008"
+    description: "사용자가 만든 20곳 정답표(국내 5, 해외 15) 대비 수익모델 레이블 일치율이 85% 이상이다"
+    verification: "manual"
+    priority: "must"
+    complexity: "high"
+
+ontology:
+  entities:
+    - name: "Target"
+      fields:
+        - {name: "url", type: "string", required: true}
+        - {name: "country", type: "string", required: false}
+      relationships:
+        - {target: "Evidence", type: "has_many"}
+        - {target: "Report", type: "has_one"}
+    - name: "Evidence"
+      fields:
+        - {name: "url", type: "string", required: true}
+        - {name: "snapshot", type: "string", required: false}
+        - {name: "retrievedAt", type: "date", required: true}
+        - {name: "source", type: "string", required: true}
+      relationships:
+        - {target: "Target", type: "belongs_to"}
+    - name: "Claim"
+      fields:
+        - {name: "claim", type: "string", required: true}
+        - {name: "type", type: "string", required: true}
+        - {name: "confidence", type: "string", required: true}
+        - {name: "assumptions", type: "string", required: true}
+      relationships:
+        - {target: "Evidence", type: "has_many"}
+    - name: "Report"
+      fields:
+        - {name: "generatedAt", type: "date", required: true}
+        - {name: "revenueModelLabels", type: "string", required: true}
+      relationships:
+        - {target: "Claim", type: "has_many"}
+    - name: "GoldLabel"
+      fields:
+        - {name: "targetUrl", type: "string", required: true}
+        - {name: "labels", type: "string", required: true}
+      relationships:
+        - {target: "Target", type: "belongs_to"}
+  actions:
+    - name: "collectPricing"
+      actor: "agent via MCP"
+      input: "target url"
+      output: "plan candidates + Evidence"
+      side_effects: ["network fetch", "optional headless browser launch"]
+    - name: "collectAppStore"
+      actor: "agent via MCP"
+      input: "store page url"
+      output: "in-app product list + Evidence"
+      side_effects: ["network fetch"]
+    - name: "collectTerms"
+      actor: "agent via MCP"
+      input: "target url"
+      output: "billing/refund passages + Evidence"
+      side_effects: ["network fetch"]
+    - name: "submitReport"
+      actor: "agent via MCP"
+      input: "Report draft"
+      output: "validated Report or error list"
+      side_effects: ["writes report file"]
+    - name: "evaluateAgainstGold"
+      actor: "user via CLI"
+      input: "Report set + GoldLabel set"
+      output: "label match rate"
+      side_effects: []
+
+scope:
+  mvp:
+    - "claim 스키마와 검증 (이미 스캐폴드됨)"
+    - "웹 가격, JS 렌더링, 앱스토어, 약관·환불 수집기"
+    - "MCP 서버 (collect_*, submit_report)"
+    - "CLI dre eval과 정답표 형식"
+  future:
+    - "트래픽·광고비·매출 범위 추정 (v0.2)"
+    - "CPC/CTR/CVR/ROAS 시나리오 (v0.3)"
+    - "호스팅, 모니터링, 한국 시장 보정 데이터 (유료)"
+
+tech_decisions:
+  - decision: "추론은 호출하는 에이전트가 수행하고 DRE는 수집·검증만 한다"
+    reason: "자체 API 키 불필요, 한계비용 0, MCP 철학과 일치"
+    alternatives_considered: ["CLI가 BYOK로 LLM 직접 호출"]
+  - decision: "수익모델은 다중 레이블 태깅"
+    reason: "혼합 모델 서비스를 표현 가능하고 일치율 측정이 쉬움"
+    alternatives_considered: ["단일 주된 모델", "주/보조 계층형"]
+  - decision: "정답표는 사용자가 직접 라벨링"
+    reason: "모델 성향에 정답이 치우치는 것을 방지"
+    alternatives_considered: ["에이전트 초안 후 검수", "공개 데이터 기반"]
+  - decision: "일치율 지표는 레이블 집합 Jaccard 평균으로 AC-007에서 정의한다"
+    reason: "다중 레이블에 적합하고 구현이 단순"
+    alternatives_considered: ["exact match", "micro/macro F1"]

@@ -1,0 +1,8 @@
+{
+  "name": "@dre/cli",
+  "version": "0.0.1",
+  "license": "Apache-2.0",
+  "type": "module",
+  "bin": { "dre": "dist/index.js" },
+  "dependencies": { "@dre/app": "0.0.1", "@dre/core": "0.0.1" }
+}

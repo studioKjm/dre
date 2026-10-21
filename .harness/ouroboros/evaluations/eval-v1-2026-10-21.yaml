@@ -1,0 +1,38 @@
+date: "2026-10-21T00:00:00"
+seed_ref: "seed-v1.yaml"
+stages:
+  mechanical:
+    result: "pass"
+    details: {gates: pass, layers: pass, lint: skip (not configured), typecheck: pass, tests: "61/61"}
+  semantic:
+    result: "fail"
+    ac_compliance: {met: 7, total: 8}
+    goal_alignment: "aligned"
+    ontology_drift: "low"
+  judgment:
+    result: "fail"
+verdict: "fail"
+issues:
+  - id: E-1
+    severity: must
+    summary: "리다이렉트 대상이 robots.txt 검사를 받지 않는다 (constraints.must: robots.txt 준수 위반)"
+    evidence: "packages/data/src/fetcher.ts fetch()가 redirect 기본값(follow)을 사용. 재현: A(허용)가 B(/pricing 불허)로 302 → A만 검사하고 B의 가격 페이지를 수집, evidence.url=B"
+  - id: E-2
+    severity: should
+    summary: "MCP 도구가 사설/루프백/메타데이터 주소(localhost, 192.168.x, 169.254.169.254)를 허용 (SSRF 성격)"
+    evidence: "urlSchema.safeParse로 3개 주소 모두 true"
+  - id: E-3
+    severity: pending
+    summary: "AC-008 미충족: 사용자 정답표 20곳 라벨링과 일치율 측정 전 (수동)"
+  - id: E-4
+    severity: should
+    summary: "불변 규칙 4의 '매출 단일 값 출력 금지'가 기계적으로 강제되지 않음 (estimated는 범위 필수지만 observed/inferred 문구는 검사하지 않음)"
+  - id: E-5
+    severity: low
+    summary: "온톨로지 편차: Evidence.source 필드와 Target 엔티티가 코드에 없음, Report.revenueModelLabels는 optional (seed는 required)"
+  - id: E-6
+    severity: note
+    summary: "AC-003 '브라우저 없으면 실패'는 Data 렌더러에서 충족, 수집기 레벨은 TRD 합의에 따라 정적 수집 폴백 + 경고"
+  - id: E-7
+    severity: note
+    summary: "스토어 파서(AC-004)는 직접 만든 픽스처로만 검증됨, 실제 스토어 페이지 미검증"

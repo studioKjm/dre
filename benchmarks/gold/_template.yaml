@@ -1,0 +1,8 @@
+targetUrl: "https://example.com"
+country: "US"          # KR | US | ...
+labels:
+  - subscription
+  - freemium
+evidence:
+  - "https://example.com/pricing"
+labeledAt: "2026-10-21"

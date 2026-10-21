@@ -1,0 +1,9 @@
+node_modules
+dist
+*.tsbuildinfo
+.env
+.env.local
+.env.*.local
+.claude/settings.local.json
+.review-artifacts/
+.harness/ouroboros/session.db

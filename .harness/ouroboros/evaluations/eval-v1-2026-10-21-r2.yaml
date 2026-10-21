@@ -1,0 +1,33 @@
+date: "2026-10-21T00:00:00"
+seed_ref: "seed-v1.yaml"
+supersedes: "eval-v1-2026-10-21.yaml"
+stages:
+  mechanical:
+    result: "pass"
+    details: {gates: pass, layers: pass, lint: skip (not configured), typecheck: pass, tests: "74/74"}
+  semantic:
+    result: "pass"
+    ac_compliance: {met: 7, total: 8, pending_manual: ["AC-008"]}
+    goal_alignment: "aligned"
+    ontology_drift: "low"
+  judgment:
+    result: "pass"
+verdict: "pass (implementation scope); AC-008 pending manual labeling"
+resolved:
+  - id: E-1
+    fix: "fetchPage가 리다이렉트를 직접 따라가며 매 홉마다 CrawlPolicy 재검사(onRedirect), 브라우저는 최상위 이동마다 onNavigate"
+    verification: "app 회귀 테스트 통과. 수정 제거 시 해당 테스트가 실패함을 확인(mutation check)"
+  - id: E-2
+    fix: "core의 isPrivateAddress/isPrivateHostname + Data의 assertPublicUrl(DNS 조회 포함)을 fetchPage/fetchRobots/renderPage에 적용, MCP 입력 스키마에서도 거부, allowPrivateNetwork로만 허용"
+    verification: "net/fetcher/browser/mcp/app 테스트"
+open:
+  - id: E-3
+    summary: "AC-008 사용자 정답표 라벨링 후 일치율 측정 (수동)"
+  - id: E-4
+    summary: "매출 단일 값 금지는 estimated만 기계 강제. 문서·도구 설명으로 보완"
+  - id: E-5
+    summary: "온톨로지 편차(Evidence.source, Target 엔티티, revenueModelLabels optional) 미해결, seed-v2 후보"
+  - id: E-7
+    summary: "스토어 파서는 가짜 픽스처로만 검증"
+  - id: E-8
+    summary: "SSRF 방어 한계: DNS rebinding(검사 후 연결 사이 변경) 미방어, 브라우저 하위 리소스는 사설 주소 리터럴만 차단하고 robots 미검사"

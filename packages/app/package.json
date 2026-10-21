@@ -1,0 +1,9 @@
+{
+  "name": "@dre/app",
+  "version": "0.0.1",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "dependencies": { "@dre/core": "0.0.1", "@dre/data": "0.0.1", "@dre/logic": "0.0.1" }
+}
