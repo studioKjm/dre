@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { FakeFetcher, allowAll, policyWith } from "../testing.js";
 import { TermsCollector } from "./terms.js";
 
-const HOME = `<a href="/terms">Terms of Service</a> <a href="/about">About</a> <a href="https://other.com/refund">Refund</a>`;
+const HOME = `<a href="/terms">Terms of Service</a> <a href="/about">About</a>`;
 const TERMS = `<p>Welcome.</p><p>Subscriptions renew automatically each month until cancelled.</p><p>Refunds are available within 14 days of purchase.</p>`;
 
 test("collect follows same-origin terms links and extracts billing passages", async () => {
@@ -14,7 +14,18 @@ test("collect follows same-origin terms links and extracts billing passages", as
     "Refunds are available within 14 days of purchase.",
   ]);
   assert.equal(r.evidence[0]!.url, "https://a.com/terms");
-  assert.ok(!fetcher.calls.includes("https://other.com/refund"));
+});
+
+test("cross-origin terms links are followed after same-origin ones, each checked by robots", async () => {
+  const home = `<a href="https://docs.a.com/tos">Terms</a> <a href="/legal">Legal</a>`;
+  const fetcher = new FakeFetcher({
+    "https://a.com/": home,
+    "https://a.com/legal": "<p>Subscriptions renew automatically every year.</p>",
+    "https://docs.a.com/tos": "<p>Refunds are not provided for partial periods.</p>",
+  });
+  const r = await new TermsCollector(fetcher, allowAll()).collect("https://a.com/");
+  assert.deepEqual(fetcher.calls, ["https://a.com/", "https://a.com/legal", "https://docs.a.com/tos"]);
+  assert.equal(r.items.length, 2);
 });
 
 test("a linked page disallowed by robots is skipped with a warning", async () => {

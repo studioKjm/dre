@@ -18,9 +18,17 @@ export class ReportStore {
   async save(report: Report): Promise<string> {
     await mkdir(this.dir, { recursive: true });
     const stamp = report.generatedAt.replace(/[^0-9A-Za-z]+/g, "");
-    const path = join(this.dir, `${slug(report.target)}-${stamp}.json`);
-    await writeFile(path, JSON.stringify(report, null, 2) + "\n", "utf-8");
-    return path;
+    const body = JSON.stringify(report, null, 2) + "\n";
+    // 같은 대상·같은 시각에 저장해도 덮어쓰지 않도록 "wx"로 쓰고 충돌 시 번호를 붙인다.
+    for (let n = 0; ; n++) {
+      const path = join(this.dir, `${slug(report.target)}-${stamp}${n ? `-${n}` : ""}.json`);
+      try {
+        await writeFile(path, body, { encoding: "utf-8", flag: "wx" });
+        return path;
+      } catch (e) {
+        if ((e as NodeJS.ErrnoException).code !== "EEXIST") throw e;
+      }
+    }
   }
 
   async load(path: string): Promise<Report> {

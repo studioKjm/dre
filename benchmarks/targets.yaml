@@ -1,0 +1,23 @@
+# AC-008 평가 대상 20곳 (국내 5, 해외 15). 정답 라벨은 사용자가 benchmarks/gold/ 에 직접 작성한다.
+# pricing: 가격/플랜 페이지, home: 약관 링크 탐색 시작점, apple: App Store 상품 페이지(있는 경우)
+targets:
+  - {id: notion, country: US, home: "https://www.notion.com/", pricing: "https://www.notion.com/pricing", apple: "https://apps.apple.com/us/app/id1232780281"}
+  - {id: figma, country: US, home: "https://www.figma.com/", pricing: "https://www.figma.com/pricing/"}
+  - {id: github, country: US, home: "https://github.com/", pricing: "https://github.com/pricing"}
+  - {id: dropbox, country: US, home: "https://www.dropbox.com/", pricing: "https://www.dropbox.com/plans", apple: "https://apps.apple.com/us/app/id327630330"}
+  - {id: zoom, country: US, home: "https://zoom.us/", pricing: "https://zoom.us/pricing", apple: "https://apps.apple.com/us/app/id546505307"}
+  - {id: grammarly, country: US, home: "https://www.grammarly.com/", pricing: "https://www.grammarly.com/plans"}
+  - {id: stripe, country: US, home: "https://stripe.com/", pricing: "https://stripe.com/pricing"}
+  - {id: airbnb, country: US, home: "https://www.airbnb.com/", pricing: "https://www.airbnb.com/help/article/63", apple: "https://apps.apple.com/us/app/id401626263"}
+  - {id: shopify, country: US, home: "https://www.shopify.com/", pricing: "https://www.shopify.com/pricing"}
+  - {id: substack, country: US, home: "https://substack.com/", pricing: "https://substack.com/going-paid"}
+  - {id: spotify, country: US, home: "https://www.spotify.com/", pricing: "https://www.spotify.com/us/premium/", apple: "https://apps.apple.com/us/app/id324684580"}
+  - {id: duolingo, country: US, home: "https://www.duolingo.com/", pricing: "https://www.duolingo.com/super", apple: "https://apps.apple.com/us/app/id570060128"}
+  - {id: canva, country: US, home: "https://www.canva.com/", pricing: "https://www.canva.com/pricing/", apple: "https://apps.apple.com/us/app/id897446215"}
+  - {id: medium, country: US, home: "https://medium.com/", pricing: "https://medium.com/membership", apple: "https://apps.apple.com/us/app/id828256236"}
+  - {id: steam, country: US, home: "https://store.steampowered.com/", pricing: "https://store.steampowered.com/about/"}
+  - {id: coupang, country: KR, home: "https://www.coupang.com/", pricing: "https://www.coupang.com/", apple: "https://apps.apple.com/kr/app/id454434967"}
+  - {id: baemin, country: KR, home: "https://www.baemin.com/", pricing: "https://ceo.baemin.com/", apple: "https://apps.apple.com/kr/app/id378084485"}
+  - {id: daangn, country: KR, home: "https://www.daangn.com/", pricing: "https://www.daangn.com/", apple: "https://apps.apple.com/kr/app/id1018769995"}
+  - {id: ridi, country: KR, home: "https://ridibooks.com/", pricing: "https://ridibooks.com/"}
+  - {id: class101, country: KR, home: "https://class101.net/", pricing: "https://class101.net/"}

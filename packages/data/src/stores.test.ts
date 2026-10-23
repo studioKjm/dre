@@ -17,6 +17,17 @@ test("ReportStore save/load/list round-trips", async () => {
   assert.deepEqual(await store.list(), [path]);
 });
 
+test("ReportStore never overwrites: same target and timestamp get distinct files", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "dre-reports-"));
+  const store = new ReportStore(dir);
+  const base: Report = { target: "https://apps.apple.com/us/app/id1", generatedAt: "2026-10-21T01:02:03.004Z", sections: {} };
+  const a = await store.save(base);
+  const b = await store.save({ ...base, revenueModelLabels: ["subscription"] });
+  assert.notEqual(a, b);
+  assert.deepEqual((await store.load(a)).revenueModelLabels, undefined);
+  assert.deepEqual((await store.load(b)).revenueModelLabels, ["subscription"]);
+});
+
 test("loadGold reads valid files and skips _ templates", async () => {
   const dir = await mkdtemp(join(tmpdir(), "dre-gold-"));
   await writeFile(join(dir, "_template.yaml"), "not: valid");

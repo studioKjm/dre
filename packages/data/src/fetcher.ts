@@ -48,7 +48,7 @@ async function request(
 }
 
 export async function fetchPage(url: string, opts: FetchOptions = {}): Promise<RawPage> {
-  const { timeoutMs = 15_000, maxBytes = 2_000_000 } = opts;
+  const { timeoutMs = 15_000, maxBytes = 6_000_000 } = opts;
   const signal = AbortSignal.timeout(timeoutMs);
   const { res, finalUrl } = await request(url, opts, signal);
   if (res.status >= 400) throw new FetchError(finalUrl, "http", res.status);

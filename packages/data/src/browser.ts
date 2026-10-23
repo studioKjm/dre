@@ -79,7 +79,7 @@ export async function renderPage(url: string, opts: RenderOptions = {}): Promise
 
     let response;
     try {
-      response = await page.goto(url, { waitUntil: "networkidle0", timeout: timeoutMs });
+      response = await page.goto(url, { waitUntil: "networkidle2", timeout: timeoutMs });
     } catch (e) {
       throw violation ?? e;
     }

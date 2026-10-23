@@ -7,3 +7,4 @@ dist
 .claude/settings.local.json
 .review-artifacts/
 .harness/ouroboros/session.db
+reports/
