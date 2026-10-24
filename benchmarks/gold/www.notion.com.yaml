@@ -1,7 +1,7 @@
 targetUrl: "https://www.notion.com/"
 country: "US"
-labels: [freemium, subscription, in-app-purchase]
+labels: [subscription, freemium, usage-based, enterprise-sales]
 evidence:
   - "https://www.notion.com/pricing"
-labeledAt: "2026-10-24"
-labeledBy: "model (provisional — pending user review, see README)"
+labeledAt: "2026-10-25"
+labeledBy: "model (independent web research, no DRE report access)"

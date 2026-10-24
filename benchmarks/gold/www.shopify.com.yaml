@@ -1,7 +1,8 @@
 targetUrl: "https://www.shopify.com/"
 country: "US"
-labels: [subscription, transaction-fee]
+labels: [subscription, transaction-fee, enterprise-sales]
 evidence:
   - "https://www.shopify.com/pricing"
-labeledAt: "2026-10-24"
-labeledBy: "model (provisional — pending user review, see README)"
+  - "https://www.shopify.com/plus"
+labeledAt: "2026-10-25"
+labeledBy: "model (independent web research, no DRE report access)"

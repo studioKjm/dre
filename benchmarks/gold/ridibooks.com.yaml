@@ -1,7 +1,9 @@
 targetUrl: "https://ridibooks.com/"
 country: "KR"
-labels: [subscription, one-time]
+labels: [one-time, subscription, in-app-purchase, licensing]
 evidence:
-  - "https://ridibooks.com/subscription/ridiselect"
-labeledAt: "2026-10-24"
-labeledBy: "model (provisional — pending user review, see README)"
+  - "https://ridibooks.com/"
+  - "https://select.ridibooks.com/"
+  - "https://www.bizhankook.com/bk/article/23266"
+labeledAt: "2026-10-25"
+labeledBy: "model (independent web research, no DRE report access)"

@@ -1,7 +1,8 @@
 targetUrl: "https://class101.net/"
 country: "KR"
-labels: [subscription, one-time]
+labels: [subscription, one-time, enterprise-sales]
 evidence:
-  - "https://class101.net/"
-labeledAt: "2026-10-24"
-labeledBy: "model (provisional — pending user review, see README)"
+  - "https://docs.channel.io/classmate/ko/articles/%ED%81%B4%EB%9E%98%EC%8A%A4101-%EB%A7%88%EC%8A%A4%ED%84%B0-%EA%B0%9C%EB%B3%84%EA%B5%AC%EB%A7%A4-%EC%95%88%EB%82%B4-526bd8b6"
+  - "https://docs.channel.io/classmate/ko/articles/%ED%81%B4%EB%9E%98%EC%8A%A4101-%ED%94%8C%EB%9F%AC%EC%8A%A4-%EA%B5%AC%EB%8F%85-%EC%95%88%EB%82%B4-96e00610"
+labeledAt: "2026-10-25"
+labeledBy: "model (independent web research, no DRE report access)"

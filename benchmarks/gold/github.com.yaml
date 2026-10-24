@@ -1,7 +1,7 @@
 targetUrl: "https://github.com/"
 country: "US"
-labels: [freemium, subscription, usage-based]
+labels: [subscription, freemium, usage-based, enterprise-sales]
 evidence:
   - "https://github.com/pricing"
-labeledAt: "2026-10-24"
-labeledBy: "model (provisional — pending user review, see README)"
+labeledAt: "2026-10-25"
+labeledBy: "model (independent web research, no DRE report access)"

@@ -2,6 +2,6 @@ targetUrl: "https://www.airbnb.com/"
 country: "US"
 labels: [marketplace-fee]
 evidence:
-  - "https://www.airbnb.com/help/article/63"
-labeledAt: "2026-10-24"
-labeledBy: "model (provisional — pending user review, see README)"
+  - "https://www.airbnb.com/help/article/1857"
+labeledAt: "2026-10-25"
+labeledBy: "model (independent web research, no DRE report access)"

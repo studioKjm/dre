@@ -1,7 +1,8 @@
 targetUrl: "https://store.steampowered.com/"
 country: "US"
-labels: [marketplace-fee, one-time, transaction-fee]
+labels: [one-time, marketplace-fee, transaction-fee, in-app-purchase]
 evidence:
-  - "https://store.steampowered.com/about/"
-labeledAt: "2026-10-24"
-labeledBy: "model (provisional — pending user review, see README)"
+  - "https://fortune.com/2018/12/01/steam-valve-developer-revenue-agreement"
+  - "https://www.pcgamesn.com/steam-revenue-split-big-games"
+labeledAt: "2026-10-25"
+labeledBy: "model (independent web research, no DRE report access)"

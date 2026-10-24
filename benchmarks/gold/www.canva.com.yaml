@@ -1,7 +1,8 @@
 targetUrl: "https://www.canva.com/"
 country: "US"
-labels: [freemium, subscription, in-app-purchase]
+labels: [subscription, freemium, marketplace-fee, enterprise-sales]
 evidence:
   - "https://www.canva.com/pricing/"
-labeledAt: "2026-10-24"
-labeledBy: "model (provisional — pending user review, see README)"
+  - "https://www.canva.com/help/canva-creators-program/"
+labeledAt: "2026-10-25"
+labeledBy: "model (independent web research, no DRE report access)"

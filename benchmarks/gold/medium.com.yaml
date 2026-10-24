@@ -1,7 +1,8 @@
 targetUrl: "https://medium.com/"
 country: "US"
-labels: [subscription, in-app-purchase]
+labels: [subscription, freemium]
 evidence:
-  - "https://medium.com/membership"
-labeledAt: "2026-10-24"
-labeledBy: "model (provisional — pending user review, see README)"
+  - "https://help.medium.com/hc/en-us/articles/115004545567"
+  - "https://medium.com/plans"
+labeledAt: "2026-10-25"
+labeledBy: "model (independent web research, no DRE report access)"

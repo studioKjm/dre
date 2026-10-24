@@ -1,7 +1,7 @@
 targetUrl: "https://www.coupang.com/"
 country: "KR"
-labels: [marketplace-fee, transaction-fee, one-time, subscription]
+labels: [marketplace-fee, subscription, ads]
 evidence:
-  - "https://www.coupang.com/"
-labeledAt: "2026-10-24"
-labeledBy: "model (provisional — pending user review, see README)"
+  - "https://www.sec.gov/Archives/edgar/data/1834584/000183458424000023/cpng-20231231.htm"
+labeledAt: "2026-10-25"
+labeledBy: "model (independent web research, no DRE report access)"

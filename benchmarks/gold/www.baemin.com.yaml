@@ -2,7 +2,7 @@ targetUrl: "https://www.baemin.com/"
 country: "KR"
 labels: [marketplace-fee, ads, subscription]
 evidence:
-  - "https://www.baemin.com/"
-  - "https://ceo.baemin.com/"
-labeledAt: "2026-10-24"
-labeledBy: "model (provisional — pending user review, see README)"
+  - "https://news.bizwatch.co.kr/article/consumer/2024/09/11/0002"
+  - "https://www.dailian.co.kr/news/view/848455/"
+labeledAt: "2026-10-25"
+labeledBy: "model (independent web research, no DRE report access)"

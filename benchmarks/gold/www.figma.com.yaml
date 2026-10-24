@@ -1,7 +1,8 @@
 targetUrl: "https://www.figma.com/"
 country: "US"
-labels: [freemium, subscription]
+labels: [subscription, freemium, usage-based, enterprise-sales]
 evidence:
   - "https://www.figma.com/pricing/"
-labeledAt: "2026-10-24"
-labeledBy: "model (provisional — pending user review, see README)"
+  - "https://www.figma.com/pricing-faq/"
+labeledAt: "2026-10-25"
+labeledBy: "model (independent web research, no DRE report access)"

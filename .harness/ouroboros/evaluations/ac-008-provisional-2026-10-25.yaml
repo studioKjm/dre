@@ -1,0 +1,28 @@
+date: "2026-10-25T00:00:00"
+seed_ref: "seed-v1.yaml"
+ac_ref: "AC-008"
+status: "provisional — still not a valid AC-008 measurement, supersedes 2026-10-24 run"
+caveat: >
+  정답표 20곳을 사용자가 아닌, 분석(reports/)과 분리된 서브에이전트 2개(배치 A/B, 각 10곳)가
+  reports/와 기존 gold를 보지 않고 웹 검색(공시·IR·공식 페이지)만으로 독립 라벨링함.
+  grader/graded 분리는 이전(모델이 직접 둘 다 작성)보다 개선됐으나, 여전히 같은 모델 계열이라
+  진짜 제3자 검증은 아님. seed-v1의 "정답표는 사용자가 직접 라벨링" 결정은 아직 충족되지 않음.
+method:
+  - "독립 라벨링 직후 1차 측정 → 54.3% (전일 88.7%보다 낮아짐)"
+  - "원인 조사: enterprise-sales가 8곳에서 체계적으로 누락됨을 확인 — DRE가 수집한 원문(htmlToText)에
+     'Enterprise/Contact Sales' 문구가 실제로 있었는데 리포트 작성 시 누락된 라벨링 버그였음"
+  - "버그 수정 후 재측정 → 67.3%"
+mean_match: 0.673
+pass_threshold: 0.85
+root_causes_found:
+  - type: "collection gap (제품 버그 후보)"
+    detail: "Canva, Class101은 fetch/브라우저 렌더링 모두 텍스트가 거의 안 나옴 (JS 중심 페이지). freemium/marketplace-fee/enterprise-sales/one-time 라벨을 DRE가 원천적으로 볼 수 없음"
+  - type: "taxonomy 모호성 (seed-v2 후보)"
+    detail: "'subscription' 라벨이 '분석 대상이 직접 구독료를 받는다'와 '구독 기반 비즈니스를 가능하게 한다(예: Substack, Steam)'를 구분하지 않음. 'in-app-purchase'의 적용 범위(iOS 유통 채널 자체 vs 핵심 수익모델)도 불명확"
+  - type: "조사 깊이 차이 (판정 불가)"
+    detail: "Duolingo/Ridi/Steam/쿠팡에서 두 독립 에이전트 또는 제 분석 사이에 방향이 다른 불일치가 남음. 어느 쪽이 맞는지 같은 모델 계열로는 판정할 수 없음"
+known_gaps:
+  - "canva: freemium, marketplace-fee, enterprise-sales 미확인 (수집 실패)"
+  - "class101: one-time, enterprise-sales 미확인 (수집 실패)"
+  - "substack: subscription 포함 여부가 라벨 정의에 따라 달라짐"
+next_step: "사용자가 reports/를 보지 않고 직접 20곳 라벨링 → 재측정이 진짜 AC-008 결과"

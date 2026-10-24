@@ -1,7 +1,8 @@
 targetUrl: "https://substack.com/"
 country: "US"
-labels: [subscription, transaction-fee]
+labels: [transaction-fee]
 evidence:
-  - "https://substack.com/going-paid"
-labeledAt: "2026-10-24"
-labeledBy: "model (provisional — pending user review, see README)"
+  - "https://substack.com/about"
+  - "https://faq.substack.com/p/how-do-paid-subscriptions-on-substack"
+labeledAt: "2026-10-25"
+labeledBy: "model (independent web research, no DRE report access)"
