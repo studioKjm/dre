@@ -1,0 +1,7 @@
+targetUrl: "https://ridibooks.com/"
+country: "KR"
+labels: [subscription, one-time]
+evidence:
+  - "https://ridibooks.com/subscription/ridiselect"
+labeledAt: "2026-10-24"
+labeledBy: "model (provisional — pending user review, see README)"

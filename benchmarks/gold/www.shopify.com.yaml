@@ -1,0 +1,7 @@
+targetUrl: "https://www.shopify.com/"
+country: "US"
+labels: [subscription, transaction-fee]
+evidence:
+  - "https://www.shopify.com/pricing"
+labeledAt: "2026-10-24"
+labeledBy: "model (provisional — pending user review, see README)"

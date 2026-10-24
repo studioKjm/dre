@@ -1,0 +1,7 @@
+targetUrl: "https://stripe.com/"
+country: "US"
+labels: [transaction-fee]
+evidence:
+  - "https://stripe.com/pricing"
+labeledAt: "2026-10-24"
+labeledBy: "model (provisional — pending user review, see README)"

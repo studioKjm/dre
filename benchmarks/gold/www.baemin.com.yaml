@@ -1,0 +1,8 @@
+targetUrl: "https://www.baemin.com/"
+country: "KR"
+labels: [marketplace-fee, ads, subscription]
+evidence:
+  - "https://www.baemin.com/"
+  - "https://ceo.baemin.com/"
+labeledAt: "2026-10-24"
+labeledBy: "model (provisional — pending user review, see README)"

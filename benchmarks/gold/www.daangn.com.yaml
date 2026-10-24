@@ -1,0 +1,7 @@
+targetUrl: "https://www.daangn.com/"
+country: "KR"
+labels: [ads]
+evidence:
+  - "https://business.daangn.com/"
+labeledAt: "2026-10-24"
+labeledBy: "model (provisional — pending user review, see README)"

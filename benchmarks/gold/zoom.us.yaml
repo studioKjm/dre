@@ -1,0 +1,7 @@
+targetUrl: "https://zoom.us/"
+country: "US"
+labels: [subscription, in-app-purchase]
+evidence:
+  - "https://zoom.us/pricing"
+labeledAt: "2026-10-24"
+labeledBy: "model (provisional — pending user review, see README)"

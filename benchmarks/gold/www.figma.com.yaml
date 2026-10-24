@@ -1,0 +1,7 @@
+targetUrl: "https://www.figma.com/"
+country: "US"
+labels: [freemium, subscription]
+evidence:
+  - "https://www.figma.com/pricing/"
+labeledAt: "2026-10-24"
+labeledBy: "model (provisional — pending user review, see README)"

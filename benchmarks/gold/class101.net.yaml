@@ -1,0 +1,7 @@
+targetUrl: "https://class101.net/"
+country: "KR"
+labels: [subscription, one-time]
+evidence:
+  - "https://class101.net/"
+labeledAt: "2026-10-24"
+labeledBy: "model (provisional — pending user review, see README)"

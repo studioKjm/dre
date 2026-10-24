@@ -1,0 +1,7 @@
+targetUrl: "https://www.grammarly.com/"
+country: "US"
+labels: [freemium, subscription]
+evidence:
+  - "https://www.grammarly.com/plans"
+labeledAt: "2026-10-24"
+labeledBy: "model (provisional — pending user review, see README)"
