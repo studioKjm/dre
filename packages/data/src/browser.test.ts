@@ -2,8 +2,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import http from "node:http";
 import type { AddressInfo } from "node:net";
-import { BrowserUnavailable, htmlToText } from "@dre/core";
-import { findChrome, renderPage } from "./browser.js";
+import { AutomationBlocked, BrowserUnavailable, htmlToText } from "@dre/core";
+import { detectAutomationBlock, findChrome, renderPage } from "./browser.js";
 
 test("findChrome honors DRE_CHROME_PATH and returns undefined when it does not exist", () => {
   assert.equal(findChrome({ DRE_CHROME_PATH: "/x/chrome" }, (p) => p === "/x/chrome"), "/x/chrome");
@@ -60,3 +60,32 @@ test("renderPage aborts when onNavigate rejects a redirect target", { skip: find
     for (const s of [start, target]) { s.closeAllConnections(); s.close(); }
   }
 });
+
+test("detectAutomationBlock matches the known Canva block title, not ordinary titles", () => {
+  assert.equal(detectAutomationBlock("<title>지원되지 않는 클라이언트 – Canva</title>"), 'title="지원되지 않는 클라이언트 – Canva"');
+  assert.equal(detectAutomationBlock("<title>Unsupported Client</title>"), 'title="Unsupported Client"');
+  assert.equal(detectAutomationBlock("<title>Canva Pricing</title>"), undefined);
+  assert.equal(detectAutomationBlock("<html><body>no title here</body></html>"), undefined);
+});
+
+test(
+  "renderPage throws AutomationBlocked (not a silent empty page) when the site detects the automated browser",
+  { skip: findChrome() ? false : "Chrome not installed" },
+  async () => {
+    const server = http.createServer((_, res) => {
+      res.setHeader("content-type", "text/html; charset=utf-8");
+      res.end("<html><head><meta charset=\"utf-8\"><title>지원되지 않는 클라이언트 – Test</title></head><body></body></html>");
+    });
+    await new Promise<void>((r) => server.listen(0, "127.0.0.1", r));
+    const { port } = server.address() as AddressInfo;
+    try {
+      await assert.rejects(
+        renderPage(`http://127.0.0.1:${port}/`, { allowPrivate: true, timeoutMs: 20_000 }),
+        (e: unknown) => e instanceof AutomationBlocked && /지원되지 않는 클라이언트/.test(e.signal),
+      );
+    } finally {
+      server.closeAllConnections();
+      server.close();
+    }
+  },
+);

@@ -29,3 +29,31 @@
     신규 API를 추가할 때마다 클라이언트별 파싱 로직을 별도로 작성해야 했다.
   decision: "[TODO: 어떤 결정을 내렸는지]"
   consequence: "[TODO: 이 결정의 결과]"
+
+- id: ADR-002
+  title: "수익모델 레이블 taxonomy를 코드로 고정하고 모호한 정의를 명확히 함"
+  status: adopted
+  date: 2026-10-25
+  stacks: [nodejs, typescript]
+  context: |
+    2026-10-24~25 AC-008 평가에서, 같은 수집 증거를 보고도 라벨링 주체가 다르면(모델 자신 vs
+    DRE 리포트를 보지 않은 독립 서브에이전트 2개) 결과가 크게 갈렸다 (88.7% -> 54.3%).
+    원인을 분해해 보니 절반은 명백한 라벨링 누락(버그)이었지만, 나머지는 레이블 정의 자체가
+    모호해서 생긴 불일치였다. 특히 Substack: "플랫폼이 구독료를 직접 받는가"와 "구독 기반
+    비즈니스를 가능하게 하는가"가 구분되지 않아 한쪽은 subscription을 붙이고 한쪽은 뺐다.
+    또한 revenueModelLabels는 Report 타입에서 그냥 string[]이라 오타나 taxonomy 밖 값이
+    들어가도 컴파일/런타임 어느 쪽에서도 걸러지지 않았다.
+  decision: |
+    packages/core/src/labels.ts에 10개 레이블의 공식 정의를 단일 출처로 둔다.
+    - subscription은 "분석 대상이 직접 고객에게 정기 결제를 청구"하는 경우로 한정하고,
+      플랫폼이 제3자의 구독에서 수수료만 떼는 경우는 transaction-fee/marketplace-fee로 표현한다.
+    - in-app-purchase는 핵심 수익모델이 아니라 "결제 채널" 보조 레이블로 명시하고, 비교 시
+      핵심 레이블과 분리해서 보도록 문서화한다.
+    Report.revenueModelLabels 타입을 RevenueModelLabel[]로 좁히고, validateReport가
+    taxonomy 밖 문자열을 오류로 반환한다. MCP의 submit_report 입력 스키마도
+    z.enum(REVENUE_MODEL_LABELS)로 맞춘다.
+  consequence: |
+    컴파일 타임에 DRE 내부 코드가 임의 라벨 문자열을 쓰는 것을 막는다. 외부 입력(MCP)은
+    여전히 런타임 검증(validateReport)에 의존한다. 기존 reports/, benchmarks/gold/의
+    Substack 라벨처럼 이 정의와 어긋나는 과거 라벨은 이 ADR 이후에만 적용되므로 소급해서
+    자동으로 고쳐지지 않는다 — 재평가 시 수동으로 바로잡아야 한다.

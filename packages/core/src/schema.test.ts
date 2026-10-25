@@ -66,3 +66,10 @@ test("estimated range with low > high is rejected", () => {
 test("empty claim text is rejected", () => {
   assert.deepEqual(validateClaim({ ...base, claim: "  " }), ["claim is empty"]);
 });
+
+test("validateReport rejects labels outside the canonical taxonomy", () => {
+  // 외부 입력(MCP 등)은 타입 검사를 거치지 않으므로 런타임 검증이 필요하다 — 여기서는 그 상황을 흉내낸다.
+  const labels = ["subscription", "bogus-label"] as unknown as Report["revenueModelLabels"];
+  const r: Report = { target: "x", generatedAt: "t", revenueModelLabels: labels, sections: {} };
+  assert.deepEqual(validateReport(r), ['revenueModelLabels: unknown label "bogus-label"']);
+});

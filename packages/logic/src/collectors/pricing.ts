@@ -1,10 +1,11 @@
-import { BrowserUnavailable, htmlToText, type RawPage } from "@dre/core";
+import { AutomationBlocked, BrowserUnavailable, htmlToText, type RawPage } from "@dre/core";
 import type { CrawlPolicy } from "../crawl-policy.js";
 import type { PageFetcher, PageRenderer } from "../ports.js";
 import type { Collected, PlanCandidate } from "../types.js";
 
+// 한국어 가격은 "20만원", "9,900원"처럼 만/억 단위 수사가 숫자와 통화기호 사이에 올 수 있다.
 const PRICE =
-  /(?:[$€£¥₩]\s?\d[\d,]*(?:\.\d+)?|\d[\d,]*(?:\.\d+)?\s?(?:원|USD|KRW|EUR))(?:\s*\/\s*(?:month|mo|year|yr|월|년))?/i;
+  /(?:[$€£¥₩]\s?\d[\d,]*(?:\.\d+)?|\d[\d,]*(?:\.\d+)?\s?(?:천|만|억)?\s?(?:원|USD|KRW|EUR))(?:\s*\/\s*(?:month|mo|year|yr|월|년))?/i;
 const FREE = /^(?:free|무료)$/i;
 
 export function extractPlanCandidates(text: string): PlanCandidate[] {
@@ -43,8 +44,15 @@ export class PricingCollector {
       try {
         page = await this.renderer.render(url);
       } catch (e) {
-        if (!(e instanceof BrowserUnavailable)) throw e;
-        warnings.push(`${e.message}; fell back to static fetch`);
+        if (e instanceof BrowserUnavailable) {
+          warnings.push(`${e.message}; fell back to static fetch`);
+        } else if (e instanceof AutomationBlocked) {
+          // 사이트가 자동화를 적극적으로 감지해 차단한 것이지 "JS 렌더링이 필요한 평범한 페이지"가
+          // 아니다. 우회하지 않고, 결과가 불완전할 수 있다는 것을 명확히 알린다.
+          warnings.push(`${e.message}; site actively blocks automated browsers — treat remaining results as low-confidence; fell back to static fetch`);
+        } else {
+          throw e;
+        }
         page = await this.fetcher.get(url);
       }
     } else {

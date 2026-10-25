@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { AutomationBlocked } from "@dre/core";
 import { RobotsDisallowed } from "../errors.js";
 import { FakeFetcher, allowAll, policyWith } from "../testing.js";
 import { PricingCollector, extractPlanCandidates } from "./pricing.js";
@@ -75,4 +76,18 @@ test("js mode without a renderer warns and uses static fetch", async () => {
   const r = await new PricingCollector(new FakeFetcher({ [url]: "<h3>Pro</h3><p>$12/month</p>" }), allowAll()).collect(url, { js: true });
   assert.equal(r.items.length, 1);
   assert.match(r.warnings[0]!, /no renderer configured/);
+});
+
+test("extractPlanCandidates matches Korean 만/억-unit prices", () => {
+  const items = extractPlanCandidates("구독\n개별 구매\n일반 이용\n개당 평균 20만원\n9만원 쿠폰팩\n9,900원 단품");
+  assert.deepEqual(items.map((i) => i.priceText), ["20만원", "9만원", "9,900원"]);
+});
+
+test("js mode surfaces AutomationBlocked as a distinct low-confidence warning, then falls back to static", async () => {
+  const url = "https://a.com/pricing";
+  const fetcher = new FakeFetcher({ [url]: "<h3>Pro</h3><p>$12/month</p>" });
+  const renderer: PageRenderer = { render: async () => { throw new AutomationBlocked(url, 'title="Unsupported Client"'); } };
+  const r = await new PricingCollector(fetcher, allowAll(), renderer).collect(url, { js: true });
+  assert.deepEqual(r.items.map((i) => i.priceText), ["$12/month"]);
+  assert.match(r.warnings[0]!, /actively blocks automated browsers/);
 });

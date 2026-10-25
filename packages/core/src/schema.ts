@@ -1,3 +1,5 @@
+import { isRevenueModelLabel, type RevenueModelLabel } from "./labels.js";
+
 /** observed: 직접 관측 / inferred: 근거 기반 추론 / estimated: 가정 기반 추정 */
 export type ClaimType = "observed" | "inferred" | "estimated";
 export type Confidence = "high" | "medium" | "low";
@@ -30,7 +32,7 @@ export interface Report {
   target: string;
   generatedAt: string;
   /** 수익모델 다중 레이블 (정답표와 비교하는 값) */
-  revenueModelLabels?: string[];
+  revenueModelLabels?: RevenueModelLabel[];
   sections: Partial<Record<Section, Claim[]>>;
 }
 
@@ -57,6 +59,9 @@ export function validateReport(r: Report): string[] {
     claims?.forEach((c, i) => {
       for (const e of validateClaim(c)) errors.push(`${section}[${i}]: ${e}`);
     });
+  }
+  for (const label of r.revenueModelLabels ?? []) {
+    if (!isRevenueModelLabel(label)) errors.push(`revenueModelLabels: unknown label "${label}"`);
   }
   return errors;
 }

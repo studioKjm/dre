@@ -1,6 +1,16 @@
 import { existsSync } from "node:fs";
-import { BrowserUnavailable, isPrivateHostname, type RawPage } from "@dre/core";
+import { AutomationBlocked, BrowserUnavailable, isPrivateHostname, type RawPage } from "@dre/core";
 import { assertPublicUrl } from "./net-guard.js";
+
+// 자동화된 브라우저를 감지해 실제 콘텐츠 대신 보여주는, 실제로 관측된 페이지의 <title> 문구.
+// 느슨한 패턴(예: "please enable javascript")은 일반 페이지에도 흔해 오탐이 크므로 넣지 않는다.
+const AUTOMATION_BLOCK_TITLES = [/^지원되지\s*않는\s*클라이언트/i, /^unsupported\s*client/i];
+
+export function detectAutomationBlock(html: string): string | undefined {
+  const title = /<title>([^<]*)<\/title>/i.exec(html)?.[1]?.trim();
+  if (title && AUTOMATION_BLOCK_TITLES.some((re) => re.test(title))) return `title="${title}"`;
+  return undefined;
+}
 
 const CHROME_PATHS = [
   "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
@@ -84,12 +94,15 @@ export async function renderPage(url: string, opts: RenderOptions = {}): Promise
       throw violation ?? e;
     }
     if (violation) throw violation;
+    const body = await page.content();
+    const blockSignal = detectAutomationBlock(body);
+    if (blockSignal) throw new AutomationBlocked(page.url(), blockSignal);
     return {
       url,
       finalUrl: page.url(),
       status: response?.status() ?? 0,
       contentType: "text/html",
-      body: await page.content(),
+      body,
       retrievedAt: new Date().toISOString(),
     };
   } finally {

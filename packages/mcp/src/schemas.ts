@@ -1,4 +1,4 @@
-import { isPrivateHostname } from "@dre/core";
+import { isPrivateHostname, REVENUE_MODEL_LABELS } from "@dre/core";
 import { z } from "zod/v4";
 
 /** 파싱할 수 없는 값은 여기서 판단하지 않는다 (url() 검사가 이미 거부한다). */
@@ -39,7 +39,7 @@ const SECTIONS = ["business-model", "positioning", "marketing", "ads", "tech-sta
 export const reportSchema = z.object({
   target: z.string(),
   generatedAt: z.string(),
-  revenueModelLabels: z.array(z.string()).optional(),
+  revenueModelLabels: z.array(z.enum(REVENUE_MODEL_LABELS)).optional(),
   sections: z.object(Object.fromEntries(SECTIONS.map((s) => [s, z.array(claimSchema).optional()])) as Record<(typeof SECTIONS)[number], z.ZodOptional<z.ZodArray<typeof claimSchema>>>),
 });
 

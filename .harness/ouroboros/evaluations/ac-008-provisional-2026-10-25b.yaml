@@ -1,0 +1,16 @@
+date: "2026-10-25T01:00:00"
+seed_ref: "seed-v1.yaml"
+ac_ref: "AC-008"
+status: "provisional — still not a valid AC-008 measurement, supersedes ac-008-provisional-2026-10-25"
+mean_match: 0.715
+pass_threshold: 0.85
+fixes_applied_this_round:
+  - "ADR-002: revenueModelLabels 타입을 RevenueModelLabel[]로 좁히고 taxonomy 밖 값을 validateReport가 거부. subscription/in-app-purchase 정의를 core/labels.ts에 고정"
+  - "pricing.ts: 가격 정규식이 한국어 '만/억' 단위(20만원 등)를 못 읽던 버그 수정 (Class101 one-time 증거 확보)"
+  - "browser.ts: 새 AutomationBlocked 에러. Canva가 자동화 브라우저를 감지해 '지원되지 않는 클라이언트' 대체 페이지를 주는 것을 확인 — 탐지 우회는 시도하지 않고, 대신 조용한 빈 결과 대신 명확한 경고로 보고하도록 수정"
+  - "substack: ADR-002 정의에 따라 subscription 라벨 제거 (플랫폼이 직접 구독료를 받지 않고 수수료만 뗌) → 100% 일치"
+remaining_known_gaps:
+  - "canva: freemium/marketplace-fee/enterprise-sales 여전히 미확인. Canva의 봇 탐지를 우회하지 않기로 한 설계 결정의 직접적 결과이며, 코드로 더 고칠 여지가 없음(의도적 한계)"
+  - "in-app-purchase 양방향 불일치(medium/dropbox/notion/zoom은 extra, ridibooks/steam은 missing): 독립 에이전트가 앱스토어 조사를 체계적으로 하지 않은 결과로 보임. ADR-002에서 in-app-purchase를 보조 레이블로 명시했으니, 다음 평가에서는 핵심 레이블만 비교하는 옵션을 추가하는 것을 고려"
+  - "Duolingo/쿠팡: freemium·ads·one-time 방향 불일치, 조사 깊이 차이로 보이며 같은 모델 계열로는 판정 불가"
+next_step: "사용자가 reports/를 보지 않고 직접 20곳 라벨링 → 재측정이 진짜 AC-008 결과"
