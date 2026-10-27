@@ -64,7 +64,7 @@ export class PricingCollector {
     const snapshot = items.map((c) => c.line).join("\n").slice(0, 1000);
     return {
       items,
-      evidence: [{ url: page.finalUrl, snapshot: snapshot || undefined, retrievedAt: page.retrievedAt }],
+      evidence: [{ url: page.finalUrl, snapshot: snapshot || undefined, retrievedAt: page.retrievedAt, source: "dre" }],
       warnings,
     };
   }

@@ -1,4 +1,4 @@
-import { htmlToText } from "@dre/core";
+import { htmlToText, type Evidence } from "@dre/core";
 import type { CrawlPolicy } from "../crawl-policy.js";
 import { RobotsDisallowed } from "../errors.js";
 import { extractLinks } from "../html.js";
@@ -31,7 +31,7 @@ export class TermsCollector {
     ].slice(0, MAX_PAGES);
 
     const items: TermsPassage[] = [];
-    const evidence = [];
+    const evidence: Evidence[] = [];
     const warnings: string[] = [];
     if (!candidates.length) warnings.push("no terms/refund links found");
 
@@ -45,7 +45,7 @@ export class TermsCollector {
           .slice(0, MAX_PASSAGES);
         if (!passages.length) continue;
         items.push(...passages.map((text) => ({ sourceUrl: page.finalUrl, text })));
-        evidence.push({ url: page.finalUrl, snapshot: passages.join("\n").slice(0, 1000), retrievedAt: page.retrievedAt });
+        evidence.push({ url: page.finalUrl, snapshot: passages.join("\n").slice(0, 1000), retrievedAt: page.retrievedAt, source: "dre" });
       } catch (e) {
         if (e instanceof RobotsDisallowed) warnings.push(`skipped ${link}: disallowed by robots.txt`);
         else throw e;

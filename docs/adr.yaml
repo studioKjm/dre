@@ -57,3 +57,30 @@
     여전히 런타임 검증(validateReport)에 의존한다. 기존 reports/, benchmarks/gold/의
     Substack 라벨처럼 이 정의와 어긋나는 과거 라벨은 이 ADR 이후에만 적용되므로 소급해서
     자동으로 고쳐지지 않는다 — 재평가 시 수동으로 바로잡아야 한다.
+
+- id: ADR-003
+  title: "DRE 수집 실패 시 에이전트 보충 리서치를 공식 경로로 만들고 observed와 분리"
+  status: adopted
+  date: 2026-10-27
+  stacks: [nodejs, typescript]
+  context: |
+    토스 경쟁사(카카오페이/네이버페이/카카오뱅크) 실사용 테스트에서 세 곳 모두 DRE 수집기가
+    막혔다 (로그인 리다이렉트, robots.txt 전체 차단, 가격 정보 없는 JS 셸). 사용자가 직접
+    일반 리서치로 보충해야 했는데, 이 과정이 "서비스가 아니라 숙제"라는 피드백을 받았다.
+    그런데 seed-v1은 DRE가 LLM/웹검색을 직접 호출하지 않는다는 제약(non_goals)이 있어,
+    DRE 자체에 리서치 기능을 넣을 수는 없다. 대신 "DRE가 막히면 호출하는 에이전트가
+    보충 리서치를 하고, 그 결과를 DRE가 직접 관측한 것과 구분해서 리포트에 담는" 경로를
+    정식 기능으로 만들기로 했다.
+  decision: |
+    Evidence에 source?: "dre" | "agent" 필드를 추가한다 (미지정 시 "dre"로 간주, 과거 리포트와 호환).
+    collect_pricing/appstore/terms이 만드는 모든 근거는 source: "dre"로 자동 태깅한다.
+    validateClaim은 observed 주장이 source:"agent" 근거에 의존하면 거부한다 — 에이전트가
+    보충한 리서치는 inferred/estimated로만 표현할 수 있다. MCP 도구 설명에 이 정책을 명시해
+    (수집이 막히면 우회하지 말고, 보충 리서치는 source:'agent'로 표시하라) 별도 학습 없이도
+    호출하는 에이전트가 올바르게 쓰도록 했다.
+  consequence: |
+    DRE는 여전히 LLM/웹검색을 직접 호출하지 않는다 — 원칙 위반이 아니다.
+    대신 리포트 하나에 "DRE가 직접 본 것"과 "에이전트가 보충한 것"이 투명하게 섞일 수 있다.
+    대가는 과거 리포트(이번 ADR 이전)에는 source가 없어 전부 "dre"로 간주되는데, 실제로는
+    AC-008 과정에서 Shopify/Steam처럼 일부는 사실상 에이전트(나 자신)의 보충 추론이 섞여
+    있었다. 소급 정정하지 않았으므로 과거 리포트의 observed 표시는 완전히 신뢰할 수 없다.

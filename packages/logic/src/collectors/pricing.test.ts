@@ -91,3 +91,9 @@ test("js mode surfaces AutomationBlocked as a distinct low-confidence warning, t
   assert.deepEqual(r.items.map((i) => i.priceText), ["$12/month"]);
   assert.match(r.warnings[0]!, /actively blocks automated browsers/);
 });
+
+test("evidence from collect() is tagged source: dre", async () => {
+  const url = "https://a.com/pricing";
+  const r = await new PricingCollector(new FakeFetcher({ [url]: "<h3>Pro</h3><p>$12/month</p>" }), allowAll()).collect(url);
+  assert.equal(r.evidence[0]!.source, "dre");
+});

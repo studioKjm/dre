@@ -73,3 +73,24 @@ test("validateReport rejects labels outside the canonical taxonomy", () => {
   const r: Report = { target: "x", generatedAt: "t", revenueModelLabels: labels, sections: {} };
   assert.deepEqual(validateReport(r), ['revenueModelLabels: unknown label "bogus-label"']);
 });
+
+test("observed claim cannot rely on agent-supplied (non-DRE) evidence", () => {
+  const c: Claim = { ...base, evidence: [{ ...base.evidence[0]!, source: "agent" }] };
+  assert.deepEqual(validateClaim(c), [
+    "observed claim cannot rely on agent-supplied evidence (source: agent) — use inferred or estimated",
+  ]);
+});
+
+test("observed claim with dre-sourced or unset-source evidence is still valid", () => {
+  assert.deepEqual(validateClaim({ ...base, evidence: [{ ...base.evidence[0]!, source: "dre" }] }), []);
+  assert.deepEqual(validateClaim(base), []); // source 미지정 == dre로 간주
+});
+
+test("inferred/estimated claims may use agent-supplied evidence", () => {
+  const c: Claim = {
+    ...base, type: "estimated", confidence: "low",
+    range: { low: 1, high: 2, unit: "USD" }, assumptions: ["a"],
+    evidence: [{ ...base.evidence[0]!, source: "agent" }],
+  };
+  assert.deepEqual(validateClaim(c), []);
+});

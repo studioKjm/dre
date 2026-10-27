@@ -29,3 +29,9 @@ test("unknown host is rejected before any fetch", async () => {
   await assert.rejects(new AppStoreCollector(fetcher, allowAll(), parser).collect("https://example.com/app"), UnsupportedStore);
   assert.deepEqual(fetcher.calls, []);
 });
+
+test("evidence from collect() is tagged source: dre", async () => {
+  const url = "https://apps.apple.com/us/app/x/id1";
+  const r = await new AppStoreCollector(new FakeFetcher({ [url]: "<html/>" }), allowAll(), parser).collect(url);
+  assert.equal(r.evidence[0]!.source, "dre");
+});

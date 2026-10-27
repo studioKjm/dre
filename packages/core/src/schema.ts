@@ -8,6 +8,13 @@ export interface Evidence {
   url: string;
   snapshot?: string;
   retrievedAt: string; // ISO 8601
+  /**
+   * 이 근거를 누가 가져왔는지. "dre"는 DRE 수집기(collect_*)가 직접 가져온 것이고,
+   * "agent"는 DRE 수집이 막히거나(robots.txt, 로그인 리다이렉트, 봇 차단) 비어 있어서
+   * 호출하는 에이전트가 자체 웹 리서치로 보충한 것이다. 생략 시 "dre"로 간주한다
+   * (과거 리포트와의 호환을 위함 — 그 시점엔 이 구분이 없었다).
+   */
+  source?: "dre" | "agent";
 }
 
 export interface Claim {
@@ -42,6 +49,8 @@ export function validateClaim(c: Claim): string[] {
   if (!c.claim.trim()) errors.push("claim is empty");
   if (c.type === "observed" && c.evidence.length === 0)
     errors.push("observed claim requires evidence");
+  if (c.type === "observed" && c.evidence.some((e) => e.source === "agent"))
+    errors.push("observed claim cannot rely on agent-supplied evidence (source: agent) — use inferred or estimated");
   if (c.type === "estimated") {
     if (!c.range) errors.push("estimated claim requires a range");
     else if (c.range.low > c.range.high) errors.push("range.low > range.high");

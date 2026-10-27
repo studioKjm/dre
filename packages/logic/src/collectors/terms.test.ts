@@ -41,3 +41,9 @@ test("warns when no terms links exist", async () => {
   const r = await new TermsCollector(new FakeFetcher({ "https://a.com/": "<p>hi</p>" }), allowAll()).collect("https://a.com/");
   assert.deepEqual(r.warnings, ["no terms/refund links found"]);
 });
+
+test("evidence from collect() is tagged source: dre", async () => {
+  const fetcher = new FakeFetcher({ "https://a.com/": HOME, "https://a.com/terms": TERMS });
+  const r = await new TermsCollector(fetcher, allowAll()).collect("https://a.com/");
+  assert.equal(r.evidence[0]!.source, "dre");
+});

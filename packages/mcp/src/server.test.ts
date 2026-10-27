@@ -95,3 +95,14 @@ test("urlSchema accepts http(s) and rejects other schemes", () => {
   }
   assert.ok(!z.object(collectInput).safeParse({}).success);
 });
+
+test("tool descriptions tell the agent how to fall back to its own research", async () => {
+  const client = await connect();
+  const tools = (await client.listTools()).tools;
+  const submit = tools.find((t) => t.name === "submit_report")!;
+  const pricing = tools.find((t) => t.name === "collect_pricing")!;
+  assert.match(submit.description!, /source:'agent'/);
+  assert.match(submit.description!, /not observed/);
+  assert.match(pricing.description!, /source:'agent'/);
+  await client.close();
+});

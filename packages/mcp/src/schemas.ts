@@ -23,6 +23,13 @@ const evidenceSchema = z.object({
   url: z.string(),
   snapshot: z.string().optional(),
   retrievedAt: z.string(),
+  source: z
+    .enum(["dre", "agent"])
+    .optional()
+    .describe(
+      "'dre' (default) if a collect_* tool returned this evidence; 'agent' if collection failed or was " +
+        "empty and you supplemented with your own web research. 'observed' claims cannot use source:'agent' evidence.",
+    ),
 });
 
 const claimSchema = z.object({
