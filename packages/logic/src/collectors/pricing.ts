@@ -1,4 +1,4 @@
-import { AutomationBlocked, BrowserUnavailable, htmlToText, type RawPage } from "@dre/core";
+import { AutomationBlocked, BrowserUnavailable, detectBotChallenge, htmlToText, type RawPage } from "@dre/core";
 import type { CrawlPolicy } from "../crawl-policy.js";
 import type { PageFetcher, PageRenderer } from "../ports.js";
 import type { Collected, PlanCandidate } from "../types.js";
@@ -59,8 +59,16 @@ export class PricingCollector {
       if (opts.js) warnings.push("no renderer configured; used static fetch");
       page = await this.fetcher.get(url);
     }
-    const items = extractPlanCandidates(htmlToText(page.body));
-    if (!items.length) warnings.push("no price-like text found (page may be JS-rendered)");
+    const text = htmlToText(page.body);
+    const items = extractPlanCandidates(text);
+    if (!items.length) {
+      const challenge = detectBotChallenge(text);
+      warnings.push(
+        challenge
+          ? `page appears to be a CAPTCHA/bot-challenge screen (${challenge}), not real content — results are empty, not just missing prices`
+          : "no price-like text found (page may be JS-rendered)",
+      );
+    }
     const snapshot = items.map((c) => c.line).join("\n").slice(0, 1000);
     return {
       items,

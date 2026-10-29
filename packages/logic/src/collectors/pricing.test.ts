@@ -97,3 +97,11 @@ test("evidence from collect() is tagged source: dre", async () => {
   const r = await new PricingCollector(new FakeFetcher({ [url]: "<h3>Pro</h3><p>$12/month</p>" }), allowAll()).collect(url);
   assert.equal(r.evidence[0]!.source, "dre");
 });
+
+test("collect reports a specific CAPTCHA/bot-challenge warning instead of a generic empty-result message", async () => {
+  const url = "https://a.com/pricing";
+  const body = "접속하신 사이트를 임시 보호 중에 있습니다.\n보안문자를 정확히 입력 후 접속하시면 정상적으로 이용하실 수 있습니다.";
+  const r = await new PricingCollector(new FakeFetcher({ [url]: body }), allowAll()).collect(url);
+  assert.equal(r.items.length, 0);
+  assert.match(r.warnings[0]!, /CAPTCHA\/bot-challenge/);
+});

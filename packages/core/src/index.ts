@@ -6,3 +6,4 @@ export * from "./text.js";
 export * from "./errors.js";
 export * from "./net.js";
 export * from "./labels.js";
+export * from "./bot-challenge.js";
