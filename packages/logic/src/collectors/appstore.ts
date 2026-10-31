@@ -23,7 +23,7 @@ export class AppStoreCollector {
     const items = parsed.map(({ name, priceText }) => ({ name, priceText }));
     return {
       items,
-      evidence: [{ url: page.finalUrl, snapshot: items.map((p) => `${p.name}: ${p.priceText}`).join("\n").slice(0, 1000) || undefined, retrievedAt: page.retrievedAt, source: "dre" }],
+      evidence: [{ url: page.finalUrl, snapshot: items.map((p) => `${p.name}: ${p.priceText}`).join("\n").slice(0, 5000) || undefined, retrievedAt: page.retrievedAt, source: "dre" }],
       warnings: items.length ? [] : ["no in-app purchase information found on the page"],
     };
   }

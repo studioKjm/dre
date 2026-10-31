@@ -45,7 +45,7 @@ export function createDreServer(services: ToolServices): McpServer {
     {
       title: "Collect pricing",
       description:
-        "Fetch a pricing page (robots.txt respected) and return plan/price candidates with evidence. Set js=true for JS-rendered pages. You infer the business model from the result; do not treat candidates as verified facts." + FALLBACK,
+        "Fetch a pricing page (robots.txt respected) and return evidence[0].snapshot: the full cleaned page text (not truncated to a preview). Read that text yourself to find plans, prices, and billing terms — it is far more reliable than the included 'items' field, which is a best-effort regex guess that can miss non-English currency formats or pick up unrelated page chrome (CSS, nav text) as a false match. Treat 'items' as a quick hint only, never as verified facts. If the live site blocks the request (403, bot/CAPTCHA detection), this may transparently fall back to an archive.org snapshot instead — check evidence[0].url and the warnings array; an archive.org URL there means the content may be stale. Set js=true for JS-rendered pages." + FALLBACK,
       inputSchema: pricingInput,
     },
     ({ url, js }) => guarded(() => services.pricing.collect(url, { js })),

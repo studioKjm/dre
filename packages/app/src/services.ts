@@ -1,5 +1,5 @@
 import type { RobotsResult } from "@dre/core";
-import { ReportStore, fetchPage, fetchRobots, loadGold, parseAppStore, parsePlay, renderPage } from "@dre/data";
+import { ReportStore, fetchFromWayback, fetchPage, fetchRobots, loadGold, parseAppStore, parsePlay, renderPage } from "@dre/data";
 import {
   AppStoreCollector,
   CrawlPolicy,
@@ -46,10 +46,11 @@ export function createServices(opts: ServiceOptions = {}) {
   const renderer = {
     render: (url: string) => renderPage(url, { userAgent, allowPrivate: allowPrivateNetwork, onNavigate: recheck }),
   };
+  const archive = { get: (url: string) => fetchFromWayback(url, { userAgent }) };
   const store = new ReportStore(reportsDir);
 
   return {
-    pricing: new PricingCollector(fetcher, policy, renderer),
+    pricing: new PricingCollector(fetcher, policy, renderer, archive),
     appstore: new AppStoreCollector(fetcher, policy, parser),
     terms: new TermsCollector(fetcher, policy),
     reports: new ReportService(store),

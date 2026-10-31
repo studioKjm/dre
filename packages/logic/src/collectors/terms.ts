@@ -45,7 +45,7 @@ export class TermsCollector {
           .slice(0, MAX_PASSAGES);
         if (!passages.length) continue;
         items.push(...passages.map((text) => ({ sourceUrl: page.finalUrl, text })));
-        evidence.push({ url: page.finalUrl, snapshot: passages.join("\n").slice(0, 1000), retrievedAt: page.retrievedAt, source: "dre" });
+        evidence.push({ url: page.finalUrl, snapshot: passages.join("\n").slice(0, 8000), retrievedAt: page.retrievedAt, source: "dre" });
       } catch (e) {
         if (e instanceof RobotsDisallowed) warnings.push(`skipped ${link}: disallowed by robots.txt`);
         else throw e;

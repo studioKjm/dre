@@ -1,13 +1,2 @@
-export type FetchErrorKind = "timeout" | "too-large" | "http" | "network" | "blocked" | "too-many-redirects";
-
-export class FetchError extends Error {
-  constructor(
-    readonly url: string,
-    readonly kind: FetchErrorKind,
-    readonly status?: number,
-    detail?: string,
-  ) {
-    super(`fetch ${kind} for ${url}${status ? ` (${status})` : ""}${detail ? `: ${detail}` : ""}`);
-    this.name = "FetchError";
-  }
-}
+// 하위 호환: 과거 "./fetcher-error.js"에서 import하던 코드가 계속 동작하도록 re-export만 남긴다.
+export { FetchError, type FetchErrorKind } from "@dre/core";

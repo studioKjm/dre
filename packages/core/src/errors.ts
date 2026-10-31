@@ -20,3 +20,18 @@ export class AutomationBlocked extends Error {
     this.name = "AutomationBlocked";
   }
 }
+
+/** Data의 Fetcher가 던지는 오류. Logic이 블록형 오류("http","blocked")를 식별해 아카이브 폴백 등을 결정한다. */
+export type FetchErrorKind = "timeout" | "too-large" | "http" | "network" | "blocked" | "too-many-redirects";
+
+export class FetchError extends Error {
+  constructor(
+    readonly url: string,
+    readonly kind: FetchErrorKind,
+    readonly status?: number,
+    detail?: string,
+  ) {
+    super(`fetch ${kind} for ${url}${status ? ` (${status})` : ""}${detail ? `: ${detail}` : ""}`);
+    this.name = "FetchError";
+  }
+}

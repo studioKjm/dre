@@ -105,3 +105,58 @@ test("collect reports a specific CAPTCHA/bot-challenge warning instead of a gene
   assert.equal(r.items.length, 0);
   assert.match(r.warnings[0]!, /CAPTCHA\/bot-challenge/);
 });
+
+test("evidence.snapshot is the full cleaned page text, not just the regex-matched price lines", async () => {
+  const url = "https://a.com/pricing";
+  const page = `<html><body>
+<p>Our Business plan is billed per member, starting at a base rate described below.</p>
+<h3>Business</h3><p>$20/month per member</p>
+</body></html>`;
+  const r = await new PricingCollector(new FakeFetcher({ [url]: page }), allowAll()).collect(url);
+  // extractPlanCandidates는 설명 문단을 플랜으로 안 뽑지만, snapshot은 전체 텍스트라 에이전트가 읽을 수 있다.
+  assert.match(r.evidence[0]!.snapshot!, /billed per member, starting at a base rate/);
+  assert.match(r.evidence[0]!.snapshot!, /\$20\/month per member/);
+});
+
+import type { PageArchive, PageFetcher } from "../ports.js";
+import { FetchError } from "@dre/core";
+
+const archived = (body: string): RawPage => ({ url: "u", finalUrl: "https://web.archive.org/web/2026/u", status: 200, contentType: "text/html", body, retrievedAt: "t" });
+
+test("archive.org fallback is used when the static fetch returns an HTTP error (e.g. 403)", async () => {
+  const url = "https://a.com/pricing";
+  const fetcher: PageFetcher = { get: async () => { throw new FetchError(url, "http", 403); } };
+  const archive: PageArchive = { get: async () => archived("<h3>Pro</h3><p>$9/month</p>") };
+  const r = await new PricingCollector(fetcher, allowAll(), undefined, archive).collect(url);
+  assert.deepEqual(r.items.map((i) => i.priceText), ["$9/month"]);
+  assert.match(r.warnings[0]!, /archive\.org snapshot was used instead/);
+});
+
+test("without an archive configured, an HTTP block error is thrown as-is", async () => {
+  const url = "https://a.com/pricing";
+  const fetcher: PageFetcher = { get: async () => { throw new FetchError(url, "http", 403); } };
+  await assert.rejects(new PricingCollector(fetcher, allowAll()).collect(url), FetchError);
+});
+
+test("archive.org fallback is NOT used for robots.txt-style private-address blocks", async () => {
+  const url = "https://a.com/pricing";
+  const fetcher: PageFetcher = { get: async () => { throw new FetchError(url, "blocked", undefined, "private address"); } };
+  const archive: PageArchive = { get: async () => { throw new Error("should not be called"); } };
+  await assert.rejects(new PricingCollector(fetcher, allowAll(), undefined, archive).collect(url), FetchError);
+});
+
+test("archive.org fallback is used when a CAPTCHA page is returned with a 200 status", async () => {
+  const url = "https://a.com/pricing";
+  const fetcher: PageFetcher = { get: async () => ({ url, finalUrl: url, status: 200, contentType: "text/html", body: "보안문자를 정확히 입력 후 접속하시면", retrievedAt: "t" }) };
+  const archive: PageArchive = { get: async () => archived("<h3>Pro</h3><p>20만원</p>") };
+  const r = await new PricingCollector(fetcher, allowAll(), undefined, archive).collect(url);
+  assert.deepEqual(r.items.map((i) => i.priceText), ["20만원"]);
+  assert.match(r.warnings[0]!, /CAPTCHA\/bot-challenge/);
+});
+
+test("if the archive also has nothing, falls through to the normal empty-result warning", async () => {
+  const url = "https://a.com/pricing";
+  const fetcher: PageFetcher = { get: async () => { throw new FetchError(url, "http", 403); } };
+  const archive: PageArchive = { get: async () => null };
+  await assert.rejects(new PricingCollector(fetcher, allowAll(), undefined, archive).collect(url), FetchError);
+});
