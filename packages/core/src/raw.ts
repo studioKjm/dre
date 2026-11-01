@@ -6,6 +6,8 @@ export interface RawPage {
   contentType: string;
   body: string;
   retrievedAt: string; // ISO 8601
+  /** 응답 헤더 (소문자 키). 기술스택 탐지(x-powered-by, server 등)에 쓴다. 비어 있을 수 있다. */
+  headers?: Record<string, string>;
 }
 
 /** 스토어 페이지에서 추출한 인앱 상품 (개인정보 필드 없음) */

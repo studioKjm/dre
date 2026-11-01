@@ -72,6 +72,9 @@ export async function fetchPage(url: string, opts: FetchOptions = {}): Promise<R
     throw new FetchError(finalUrl, (e as Error).name === "TimeoutError" ? "timeout" : "network");
   }
 
+  const headers: Record<string, string> = {};
+  res.headers.forEach((v, k) => (headers[k.toLowerCase()] = v));
+
   return {
     url,
     finalUrl,
@@ -79,6 +82,7 @@ export async function fetchPage(url: string, opts: FetchOptions = {}): Promise<R
     contentType: res.headers.get("content-type") ?? "",
     body: new TextDecoder("utf-8").decode(Buffer.concat(chunks)),
     retrievedAt: new Date().toISOString(),
+    headers,
   };
 }
 

@@ -1,10 +1,12 @@
 import type { RobotsResult } from "@dre/core";
 import { ReportStore, fetchFromWayback, fetchPage, fetchRobots, loadGold, parseAppStore, parsePlay, renderPage } from "@dre/data";
 import {
+  AdLibraryCollector,
   AppStoreCollector,
   CrawlPolicy,
   PricingCollector,
   ReportService,
+  TechStackCollector,
   TermsCollector,
   evaluate,
   type EvalResult,
@@ -53,6 +55,8 @@ export function createServices(opts: ServiceOptions = {}) {
     pricing: new PricingCollector(fetcher, policy, renderer, archive),
     appstore: new AppStoreCollector(fetcher, policy, parser),
     terms: new TermsCollector(fetcher, policy),
+    techstack: new TechStackCollector(fetcher, policy),
+    adlibrary: new AdLibraryCollector(renderer, policy),
     reports: new ReportService(store),
     /** 저장된 리포트 디렉터리와 정답표 디렉터리를 비교한다. */
     async evalDirs(reportsPath: string, goldPath: string): Promise<EvalResult> {

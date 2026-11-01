@@ -120,3 +120,37 @@
     자체가 다운되거나 스냅샷이 없으면 폴백도 실패한다 — 이 경우 원래 오류를 그대로 던진다.
     appstore/terms 수집기에는 아직 archive 폴백을 연결하지 않았다(가장 문제가 컸던 pricing만
     먼저 적용).
+
+- id: ADR-005
+  title: "두 번째 수집기 확장: 기술스택 탐지(헤더/HTML)와 Google 광고 투명성 센터, Meta는 의도적으로 제외"
+  status: adopted
+  date: 2026-11-01
+  stacks: [nodejs, typescript]
+  context: |
+    "REA 수준으로 유용해야 한다"는 요구(ADR-004)의 3단계. ADR-004에서 정규식 추출을
+    전체 텍스트로 바꾸고 archive.org 폴백을 추가했지만, 그것만으로는 수집 "범위" 자체는
+    넓어지지 않았다. REA가 넓어 보이는 이유 중 하나는 다루는 대상 종류가 많다는 점이다.
+    서버가 구조적으로 막기 어려운 신호(응답 헤더, 공개 투명성 도구)부터 넓히기로 했다.
+  decision: |
+    (1) TechStackCollector + detectTechStack: 응답 헤더(server, x-powered-by, x-vercel-id 등)와
+    HTML(프레임워크 마커, 결제/분석/CMS 스크립트 URL)에서 신호를 찾는다. 자체 정리한 작은
+    서명 집합이며 Wappalyzer 같은 독점 DB를 쓰지 않는다. 결제 스크립트(js.stripe.com 등)
+    탐지는 수익모델 추론의 보조 근거로도 쓸 수 있다. CAPTCHA 페이지에서는 그 페이지 자체의
+    스택을 대상의 스택으로 오인하지 않도록 신호를 비워서 반환한다.
+    (2) AdLibraryCollector: Google Ads Transparency Center(adstransparency.google.com)만
+    다룬다. robots.txt가 존재하지 않아(404, 2026-11-01 확인) 제한이 없다. 숫자 파싱은
+    "광고 약 N개"/"about N ads" 한 패턴만 가볍게 시도하고, 나머지는 전체 텍스트를 그대로
+    준다(ADR-004와 같은 철학).
+    (3) Meta 광고 라이브러리는 만들지 않는다. facebook.com/robots.txt가 "명시적 서면 허가
+    없는 자동 수집은 금지"라고 명시하고, User-agent: ClaudeBot에 대해 Disallow: / (전체 차단)를
+    별도로 지정하고 있다(2026-11-01 확인). 이건 일반적인 봇 차단 안내문이 아니라 Claude를
+    이름으로 지목한 조항이라, DRE가 이 데이터를 수집하는 것은 적절하지 않다고 판단했다.
+  consequence: |
+    실사이트로 검증: TechStack은 Linear(Next.js+Cloudflare), Allbirds(Shopify+Cloudflare),
+    stripe.com(Next.js), wordpress.org(WordPress) 모두 정확했다. AdLibrary는 notion.com에서
+    "광고 약 200개"를 정확히 뽑았고, spotify.com처럼 패턴이 안 맞을 때도 숫자를 지어내지
+    않고 경고와 함께 전체 텍스트를 넘겼다. MCP 도구가 4개에서 6개(collect_techstack,
+    collect_ad_library 추가)로 늘었다. 대가: 기술스택 서명 집합이 작아 미탐지가 있을 수
+    있고("없음"이 "그 기술을 안 쓴다"를 뜻하지 않음), 광고 데이터는 Google 생태계(검색/
+    디스플레이/유튜브)만 보여주고 Meta·TikTok 등 다른 플랫폼 광고는 보지 못한다 — 이 공백은
+    의도적이며, 봇 차단을 우회해서 메울 생각이 없다.

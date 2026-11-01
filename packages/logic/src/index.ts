@@ -5,5 +5,8 @@ export * from "./crawl-policy.js";
 export * from "./collectors/pricing.js";
 export * from "./collectors/appstore.js";
 export * from "./collectors/terms.js";
+export * from "./collectors/techstack.js";
+export * from "./collectors/adlibrary.js";
+export * from "./techstack.js";
 export * from "./report-service.js";
 export * from "./eval-service.js";

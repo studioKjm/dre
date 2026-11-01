@@ -2,7 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import type { Report } from "@dre/core";
 import type { Services } from "@dre/app";
-import { collectInput, pricingInput, submitInput } from "./schemas.js";
+import { adLibraryInput, collectInput, pricingInput, submitInput } from "./schemas.js";
 
 export const SERVER_INFO = { name: "dre", version: "0.0.1" } as const;
 
@@ -19,6 +19,8 @@ export interface ToolServices {
   pricing: Pick<Services["pricing"], "collect">;
   appstore: Pick<Services["appstore"], "collect">;
   terms: Pick<Services["terms"], "collect">;
+  techstack: Pick<Services["techstack"], "collect">;
+  adlibrary: Pick<Services["adlibrary"], "collect">;
   reports: Pick<Services["reports"], "submit">;
 }
 
@@ -69,6 +71,30 @@ export function createDreServer(services: ToolServices): McpServer {
       inputSchema: collectInput,
     },
     ({ url }) => guarded(() => services.terms.collect(url)),
+  );
+
+  server.registerTool(
+    "collect_techstack",
+    {
+      title: "Detect technology stack",
+      description:
+        "Fetch a page and look for known technology signatures in its response headers and HTML (frameworks, CMS, e-commerce platform, payment/checkout scripts like Stripe or PayPal, CDN/hosting, analytics, support widgets). This only reads what the server already sends in a normal response, so it is not something a site can bot-block without breaking the page for real visitors too — it should work even on pages where collect_pricing is blocked. The signature set is small and best-effort: absence of a signal does not mean the technology isn't used, only that it wasn't detected this way. Payment-script signals (e.g. js.stripe.com) are useful supporting evidence for transaction-fee/marketplace-fee claims." +
+        FALLBACK,
+      inputSchema: collectInput,
+    },
+    ({ url }) => guarded(() => services.techstack.collect(url)),
+  );
+
+  server.registerTool(
+    "collect_ad_library",
+    {
+      title: "Look up Google Ads Transparency Center",
+      description:
+        "Look up a domain in Google's Ads Transparency Center (adstransparency.google.com) and return the full page text as evidence, plus a best-effort 'items' count phrase (e.g. an ad-count string) if one could be parsed. Read evidence[0].snapshot yourself for advertiser names and details — do not trust an empty 'items' as proof of zero ads; check the snapshot first. Covers Google-served ads only (Google/YouTube network); this intentionally does not cover Meta/Facebook ads — facebook.com's robots.txt explicitly disallows automated collection (and names ClaudeBot specifically), so DRE does not query it." +
+        FALLBACK,
+      inputSchema: adLibraryInput,
+    },
+    ({ domain, region }) => guarded(() => services.adlibrary.collect(domain, { region })),
   );
 
   server.registerTool(
