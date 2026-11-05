@@ -1,7 +1,22 @@
 import { AutomationBlocked, BrowserUnavailable, FetchError, detectBotChallenge, htmlToText, type RawPage } from "@dre/core";
 import type { CrawlPolicy } from "../crawl-policy.js";
+import { extractLinks } from "../html.js";
 import type { PageArchive, PageFetcher, PageRenderer } from "../ports.js";
 import type { Collected, PlanCandidate } from "../types.js";
+
+/**
+ * 홈페이지 등에서 가격 페이지로 보이는 링크를 찾는다. 같은 출처를 먼저 보고, 없으면 다른 출처도
+ * 본다 — zoom.us의 홈이 www.zoom.com으로 리다이렉트되지만 가격 링크는 zoom.us에 남아있는
+ * 경우처럼, 리다이렉트 전후로 출처가 갈리는 경우가 실제로 있다 (TermsCollector와 같은 전략).
+ */
+const PRICING_LINK_HINT = /pricing|plans|subscribe|price|요금제|가격|구독/i;
+function findPricingLink(html: string, baseUrl: string): string | undefined {
+  const origin = new URL(baseUrl).origin;
+  const hinted = extractLinks(html, baseUrl).filter(
+    (l) => /^https?:/i.test(l.href) && (PRICING_LINK_HINT.test(l.text) || PRICING_LINK_HINT.test(new URL(l.href).pathname)),
+  );
+  return hinted.find((l) => l.href.startsWith(origin))?.href ?? hinted[0]?.href;
+}
 
 /**
  * robots.txt 불허(RobotsDisallowed)나 사설 주소 차단(FetchError kind "blocked")이 아니라,
@@ -59,15 +74,12 @@ export class PricingCollector {
     return archived;
   }
 
-  /**
-   * robots 불허 시 RobotsDisallowed로 중단하고 아무것도 가져오지 않는다 — 이건 archive.org로도
-   * 우회하지 않는다. js=true면 브라우저 렌더링을 쓰고, 브라우저를 쓸 수 없으면 정적 수집으로
-   * 폴백하며 경고한다. 서버가 실제로 자동화를 차단한 경우(403, 봇 탐지, CAPTCHA)에는
-   * archive.org의 독립된 스냅샷으로 한 번 더 보충한다.
-   */
-  async collect(url: string, opts: { js?: boolean } = {}): Promise<Collected<PlanCandidate>> {
-    await this.policy.assertAllowed(url);
-    const warnings: string[] = [];
+  /** url 하나를 (필요하면 archive.org 폴백까지 써서) 가져와 텍스트와 가격 후보를 뽑는다. */
+  private async fetchAndExtract(
+    url: string,
+    opts: { js?: boolean },
+    warnings: string[],
+  ): Promise<{ page: RawPage; text: string; items: PlanCandidate[]; challenge?: string }> {
     let page: RawPage | undefined;
 
     if (opts.js && this.renderer) {
@@ -109,8 +121,34 @@ export class PricingCollector {
         challenge = detectBotChallenge(text);
       }
     }
+    return { page, text, items: extractPlanCandidates(text), challenge };
+  }
 
-    const items = extractPlanCandidates(text);
+  /**
+   * robots 불허 시 RobotsDisallowed로 중단하고 아무것도 가져오지 않는다 — 이건 archive.org로도
+   * 우회하지 않는다. js=true면 브라우저 렌더링을 쓰고, 브라우저를 쓸 수 없으면 정적 수집으로
+   * 폴백하며 경고한다. 서버가 실제로 자동화를 차단한 경우(403, 봇 탐지, CAPTCHA)에는
+   * archive.org의 독립된 스냅샷으로 한 번 더 보충한다.
+   *
+   * url에 가격 정보가 없으면(가격 후보 0개, 차단 아님) 같은 출처에서 "pricing/plans/요금제"처럼
+   * 보이는 링크를 찾아 한 번 더 시도한다 — 홈페이지 URL만 주더라도 가격 페이지를 스스로 찾는다.
+   */
+  async collect(url: string, opts: { js?: boolean } = {}): Promise<Collected<PlanCandidate>> {
+    await this.policy.assertAllowed(url);
+    const warnings: string[] = [];
+    let result = await this.fetchAndExtract(url, opts, warnings);
+
+    if (!result.items.length && !result.challenge) {
+      const link = findPricingLink(result.page.body, result.page.finalUrl);
+      if (link && link !== url && link !== result.page.finalUrl) {
+        await this.policy.assertAllowed(link);
+        const discovered = await this.fetchAndExtract(link, opts, warnings);
+        warnings.push(`'${url}' had no price-like text; followed a same-origin pricing link to '${link}' instead`);
+        result = discovered; // 원래 결과는 어차피 비어 있었으므로 그대로 교체한다
+      }
+    }
+
+    const { page, text, items, challenge } = result;
     if (!items.length) {
       warnings.push(
         challenge

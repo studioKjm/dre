@@ -154,3 +154,30 @@
     있고("없음"이 "그 기술을 안 쓴다"를 뜻하지 않음), 광고 데이터는 Google 생태계(검색/
     디스플레이/유튜브)만 보여주고 Meta·TikTok 등 다른 플랫폼 광고는 보지 못한다 — 이 공백은
     의도적이며, 봇 차단을 우회해서 메울 생각이 없다.
+
+- id: ADR-006
+  title: "가격 페이지 자동탐색 + analyze_company 통합 도구 (REA 수준 로드맵 1단계)"
+  status: adopted
+  date: 2026-11-06
+  stacks: [nodejs, typescript]
+  context: |
+    "비용 없이 REA 수준으로" 검토(2026-11-05)에서 1순위로 꼽은 항목. 이번 세션 내내
+    카카오페이·네이버페이·Cafe24·Linear를 분석할 때마다 가격 페이지의 정확한 서브 URL을
+    먼저 검색해서 찾아야 했다. REA는 설치 한 줄로 끝나는데 DRE는 에이전트가 매번 사전 조사를
+    해야 하는 마찰이 있었다.
+  decision: |
+    (1) PricingCollector.collect(url)가 홈 URL만 받아도 동작한다 — 받은 페이지에 가격
+    후보가 0개이고 봇 차단도 아니면, TermsCollector와 같은 전략(같은 출처 우선, 없으면 다른
+    출처도 허용)으로 "pricing/plans/요금제" 링크를 찾아 한 번 더 시도한다. 발견한 링크도
+    robots.txt 검사를 그대로 받는다.
+    (2) 새 CompanyAnalyzer(Logic)와 analyze_company(MCP 도구): 도메인 하나로 가격·약관·
+    기술스택·광고를 한 번에 병렬 조회한다. 넷 중 하나가 막혀도(Promise.allSettled 방식으로)
+    나머지를 가리지 않고 각자 {ok, result|error}로 독립 보고한다. 앱스토어는 도메인만으로
+    URL을 추론할 수 없어 제외했다 — 필요하면 collect_appstore를 따로 쓴다.
+  consequence: |
+    실사이트 검증: notion.com, zoom.us 모두 홈 URL만 줬는데 자동으로 /pricing을 찾아 들어갔다
+    (zoom은 리다이렉트 전후 출처가 달라 cross-origin 폴백이 실제로 쓰였다). linear.app을
+    analyze_company 한 번으로 돌리니 가격 7건, 약관 7건, 기술스택 2건이 한 호출에 나왔다.
+    대가: 가격 링크 탐색이 교차 출처까지 허용해, 페이지에 있는 아무 "pricing" 류 링크를
+    실제로는 무관한 제3자 사이트로 오인해 따라갈 이론적 여지가 생겼다 — 발생 시 evidence.url로
+    바로 드러나므로 치명적이지는 않다고 판단했다.

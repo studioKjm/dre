@@ -3,6 +3,7 @@ import { ReportStore, fetchFromWayback, fetchPage, fetchRobots, loadGold, parseA
 import {
   AdLibraryCollector,
   AppStoreCollector,
+  CompanyAnalyzer,
   CrawlPolicy,
   PricingCollector,
   ReportService,
@@ -51,12 +52,18 @@ export function createServices(opts: ServiceOptions = {}) {
   const archive = { get: (url: string) => fetchFromWayback(url, { userAgent }) };
   const store = new ReportStore(reportsDir);
 
+  const pricing = new PricingCollector(fetcher, policy, renderer, archive);
+  const terms = new TermsCollector(fetcher, policy);
+  const techstack = new TechStackCollector(fetcher, policy);
+  const adlibrary = new AdLibraryCollector(renderer, policy);
+
   return {
-    pricing: new PricingCollector(fetcher, policy, renderer, archive),
+    pricing,
     appstore: new AppStoreCollector(fetcher, policy, parser),
-    terms: new TermsCollector(fetcher, policy),
-    techstack: new TechStackCollector(fetcher, policy),
-    adlibrary: new AdLibraryCollector(renderer, policy),
+    terms,
+    techstack,
+    adlibrary,
+    company: new CompanyAnalyzer(pricing, terms, techstack, adlibrary),
     reports: new ReportService(store),
     /** 저장된 리포트 디렉터리와 정답표 디렉터리를 비교한다. */
     async evalDirs(reportsPath: string, goldPath: string): Promise<EvalResult> {

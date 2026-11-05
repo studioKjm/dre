@@ -160,3 +160,49 @@ test("if the archive also has nothing, falls through to the normal empty-result 
   const archive: PageArchive = { get: async () => null };
   await assert.rejects(new PricingCollector(fetcher, allowAll(), undefined, archive).collect(url), FetchError);
 });
+
+test("when the home page has no price text, follows a same-origin pricing link automatically", async () => {
+  const home = "https://a.com/";
+  const fetcher = new FakeFetcher({
+    [home]: '<nav><a href="/about">About</a><a href="/pricing">Pricing</a></nav>',
+    "https://a.com/pricing": "<h3>Pro</h3><p>$15/month</p>",
+  });
+  const r = await new PricingCollector(fetcher, allowAll()).collect(home);
+  assert.deepEqual(r.items.map((i) => i.priceText), ["$15/month"]);
+  assert.equal(r.evidence[0]!.url, "https://a.com/pricing");
+  assert.match(r.warnings[0]!, /followed a same-origin pricing link/);
+});
+
+test("discovery respects robots.txt on the discovered link too", async () => {
+  const home = "https://a.com/";
+  const fetcher = new FakeFetcher({ [home]: '<a href="/pricing">Pricing</a>' });
+  const policy = policyWith({ kind: "found", groups: [{ agents: ["*"], allow: [], disallow: ["/pricing"] }] });
+  await assert.rejects(new PricingCollector(fetcher, policy).collect(home), RobotsDisallowed);
+});
+
+test("does not attempt discovery when the requested page already has prices", async () => {
+  const url = "https://a.com/pricing";
+  const fetcher = new FakeFetcher({ [url]: '<a href="/other-pricing-page">x</a><h3>Pro</h3><p>$9/month</p>' });
+  const r = await new PricingCollector(fetcher, allowAll()).collect(url);
+  assert.deepEqual(fetcher.calls, [url]);
+  assert.deepEqual(r.items.map((i) => i.priceText), ["$9/month"]);
+});
+
+test("does not loop when no distinct pricing link exists", async () => {
+  const home = "https://a.com/";
+  const fetcher = new FakeFetcher({ [home]: "<p>Contact us for details.</p>" });
+  const r = await new PricingCollector(fetcher, allowAll()).collect(home);
+  assert.deepEqual(fetcher.calls, [home]);
+  assert.deepEqual(r.items, []);
+});
+
+test("falls back to a cross-origin pricing link when no same-origin one exists (e.g. post-redirect origin change)", async () => {
+  const home = "https://a.com/";
+  const fetcher = new FakeFetcher({
+    [home]: '<a href="https://other.a.com/pricing">Pricing</a>',
+    "https://other.a.com/pricing": "<h3>Pro</h3><p>$5/month</p>",
+  });
+  const r = await new PricingCollector(fetcher, allowAll()).collect(home);
+  assert.deepEqual(r.items.map((i) => i.priceText), ["$5/month"]);
+  assert.equal(r.evidence[0]!.url, "https://other.a.com/pricing");
+});

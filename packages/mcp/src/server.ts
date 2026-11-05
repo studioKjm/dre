@@ -21,6 +21,7 @@ export interface ToolServices {
   terms: Pick<Services["terms"], "collect">;
   techstack: Pick<Services["techstack"], "collect">;
   adlibrary: Pick<Services["adlibrary"], "collect">;
+  company: Pick<Services["company"], "analyze">;
   reports: Pick<Services["reports"], "submit">;
 }
 
@@ -95,6 +96,18 @@ export function createDreServer(services: ToolServices): McpServer {
       inputSchema: adLibraryInput,
     },
     ({ domain, region }) => guarded(() => services.adlibrary.collect(domain, { region })),
+  );
+
+  server.registerTool(
+    "analyze_company",
+    {
+      title: "Analyze a company by domain (pricing + terms + tech stack + ad library)",
+      description:
+        "Given just a bare domain (e.g. 'notion.com'), runs collect_pricing, collect_terms, collect_techstack, and collect_ad_library against it in one call, so you don't have to hunt down each exact sub-page URL yourself first (collect_pricing already follows a same-origin 'pricing/plans' link from the home page automatically). Each of the four results is reported independently as {ok:true, result} or {ok:false, error} — one failing (e.g. terms blocked by robots.txt) does not hide the others. This does not cover App Store/Play Store (use collect_appstore separately with the actual store URL, which can't be derived from a domain alone)." +
+        FALLBACK,
+      inputSchema: adLibraryInput,
+    },
+    ({ domain, region }) => guarded(() => services.company.analyze(domain, { region })),
   );
 
   server.registerTool(

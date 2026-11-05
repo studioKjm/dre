@@ -21,6 +21,15 @@ const fake: ToolServices = {
   terms: { collect: async () => empty },
   techstack: { collect: async () => ({ ...empty, items: [{ name: "Next.js", category: "framework", evidenceText: "__NEXT_DATA__" }] }) },
   adlibrary: { collect: async () => ({ ...empty, items: [{ adCountText: "about 5 ads" }] }) },
+  company: {
+    analyze: async (domain) => ({
+      domain,
+      pricing: { ok: true, result: empty },
+      terms: { ok: true, result: empty },
+      techstack: { ok: true, result: empty },
+      adlibrary: { ok: true, result: empty },
+    }),
+  },
   reports: {
     submit: async (r) =>
       r.sections["business-model"]?.some((c) => c.type === "observed" && c.evidence.length === 0)
@@ -39,11 +48,14 @@ async function connect() {
 
 const text = (r: unknown): string => (r as { content: { text: string }[] }).content[0]!.text;
 
-test("server exposes the six tools", async () => {
+test("server exposes the seven tools", async () => {
   const client = await connect();
   assert.deepEqual(client.getServerVersion(), SERVER_INFO);
   const names = (await client.listTools()).tools.map((t) => t.name).sort();
-  assert.deepEqual(names, ["collect_appstore", "collect_pricing", "collect_techstack", "collect_terms", "collect_ad_library", "submit_report"].sort());
+  assert.deepEqual(
+    names,
+    ["collect_appstore", "collect_pricing", "collect_techstack", "collect_terms", "collect_ad_library", "analyze_company", "submit_report"].sort(),
+  );
   await client.close();
 });
 
