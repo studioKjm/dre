@@ -8,6 +8,7 @@ export * from "./collectors/terms.js";
 export * from "./collectors/techstack.js";
 export * from "./collectors/adlibrary.js";
 export * from "./collectors/edgar.js";
+export * from "./collectors/dart.js";
 export * from "./company-analyzer.js";
 export * from "./techstack.js";
 export * from "./report-service.js";

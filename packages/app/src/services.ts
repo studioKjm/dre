@@ -1,10 +1,24 @@
-import type { RobotsResult } from "@dre/core";
-import { ReportStore, fetchFromWayback, fetchPage, fetchRobots, findCik, fetchCompanyFacts, loadGold, parseAppStore, parsePlay, renderPage } from "@dre/data";
+import { ApiKeyMissing, type RobotsResult } from "@dre/core";
+import {
+  ReportStore,
+  fetchFromWayback,
+  fetchFinancialStatement as fetchDartFinancialStatement,
+  fetchPage,
+  fetchRobots,
+  findCik,
+  findCorpCode,
+  fetchCompanyFacts,
+  loadGold,
+  parseAppStore,
+  parsePlay,
+  renderPage,
+} from "@dre/data";
 import {
   AdLibraryCollector,
   AppStoreCollector,
   CompanyAnalyzer,
   CrawlPolicy,
+  DartCollector,
   EdgarCollector,
   PricingCollector,
   ReportService,
@@ -24,6 +38,8 @@ export interface ServiceOptions {
    * 연락처를 넣는 것이 원칙에 더 맞다. DRE_SEC_USER_AGENT 환경변수로 바꿀 수 있다.
    */
   secUserAgent?: string;
+  /** DART(한국 금융감독원) Open API 키. opendart.fss.or.kr에서 무료로 발급받는다. 없으면 collect_financials_kr은 매번 "키 없음" 경고만 반환한다. */
+  dartApiKey?: string;
 }
 
 /** Data 구현체를 Logic 포트에 연결하는 유일한 조립 지점. Presentation은 이 객체만 사용한다. */
@@ -33,6 +49,7 @@ export function createServices(opts: ServiceOptions = {}) {
     userAgent = "DREBot",
     allowPrivateNetwork = process.env.DRE_ALLOW_PRIVATE_NETWORK === "1",
     secUserAgent = process.env.DRE_SEC_USER_AGENT ?? "DRE-open-source-tool contact@example.com",
+    dartApiKey = process.env.DRE_DART_API_KEY,
   } = opts;
 
   const robotsCache = new Map<string, Promise<RobotsResult>>();
@@ -67,6 +84,14 @@ export function createServices(opts: ServiceOptions = {}) {
     findCik: (n) => findCik(n, { userAgent: secUserAgent }),
     fetchCompanyFacts: (cik) => fetchCompanyFacts(cik, { userAgent: secUserAgent }),
   });
+  const requireDartKey = (): string => {
+    if (!dartApiKey) throw new ApiKeyMissing("DART");
+    return dartApiKey;
+  };
+  const dart = new DartCollector({
+    findCorpCode: (n) => findCorpCode(n, { apiKey: requireDartKey() }),
+    fetchFinancialStatement: (corpCode, year) => fetchDartFinancialStatement(corpCode, year, { apiKey: requireDartKey() }),
+  });
 
   return {
     pricing,
@@ -75,6 +100,7 @@ export function createServices(opts: ServiceOptions = {}) {
     techstack,
     adlibrary,
     edgar,
+    dart,
     company: new CompanyAnalyzer(pricing, terms, techstack, adlibrary),
     reports: new ReportService(store),
     /** 저장된 리포트 디렉터리와 정답표 디렉터리를 비교한다. */

@@ -212,3 +212,31 @@
     MCP 도구가 7개에서 8개(collect_financials)로 늘었다. 대가: 미국 상장사와 (companyfacts
     API가 커버하는) 일부 대형 비상장 필러만 다루고, 카카오페이 같은 한국 회사는 여전히
     범위 밖이다 — DART 연동(3순위)이 그 공백을 메운다.
+
+- id: ADR-008
+  title: "DART(한국 금융감독원) 연동 — 키 발급은 사용자 몫, 코드는 미리 준비"
+  status: adopted
+  date: 2026-11-06
+  stacks: [nodejs, typescript]
+  context: |
+    로드맵 3순위. ADR-007(EDGAR)과 같은 문제의 한국 버전 — 카카오페이·카카오뱅크처럼
+    가격 페이지가 없는 회사의 수익 숫자를 1차 공시 자료로 얻는다. 다만 EDGAR와 달리
+    DART Open API는 무료지만 opendart.fss.or.kr 회원가입과 키 발급이 필요하다. 계정 생성은
+    대신 해줄 수 없다는 원칙에 따라, 이 세션에는 실제 키가 없어 라이브 검증을 하지 못했다.
+    회사코드 매핑 파일이 ZIP(XML)으로 내려와 adm-zip(0.6.1, 순수 JS, 의존성 없음)을
+    새로 추가했다 — 사용자 승인받음.
+  decision: |
+    data/src/dart.ts: corpCode.xml(ZIP)에서 회사명→corp_code 매핑을 읽고,
+    fnlttSinglAcnt.json(reprt_code=11011, 사업보고서)으로 연간 재무제표를 가져온다.
+    logic/collectors/dart.ts: DartCollector가 매출액/당기순이익 계정을 뽑는다.
+    DART 미등록 회사(대부분)는 오류가 아니라 빈 결과+경고로 처리한다.
+    API 키가 없으면 core의 새 ApiKeyMissing 오류로 구분해, "회사를 못 찾음"과
+    "애초에 설정이 안 됨"을 서로 다른 경고 문구로 알린다. 키는 DRE_DART_API_KEY
+    환경변수로 받는다.
+  consequence: |
+    키 없는 상태의 경로(가장 많이 쓰일 기본 상태)는 end-to-end로 확인했다 — "DART API key
+    is not configured" 경고가 정확히 나온다. 하지만 엔드포인트 파라미터명·계정명
+    표기(예: "당기순이익" vs "당기순이익(손실)")·오류 코드 체계는 공식 문서 기준으로
+    작성했을 뿐 실제 키로 검증하지 못했다. 사용자가 키를 발급받아 DRE_DART_API_KEY에
+    넣은 뒤 반드시 한 번 스모크 테스트가 필요하다 — EDGAR(ADR-007)처럼 "verified live"라고
+    말할 수 없는 유일한 수집기다.

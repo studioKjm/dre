@@ -21,6 +21,14 @@ export class AutomationBlocked extends Error {
   }
 }
 
+/** DART 같은 키 발급형 API를 아직 설정하지 않았을 때. 기능 미설정이지 네트워크 오류가 아니다. */
+export class ApiKeyMissing extends Error {
+  constructor(readonly service: string) {
+    super(`${service} API key is not configured`);
+    this.name = "ApiKeyMissing";
+  }
+}
+
 /** Data의 Fetcher가 던지는 오류. Logic이 블록형 오류("http","blocked")를 식별해 아카이브 폴백 등을 결정한다. */
 export type FetchErrorKind = "timeout" | "too-large" | "http" | "network" | "blocked" | "too-many-redirects";
 

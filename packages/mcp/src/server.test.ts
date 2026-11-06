@@ -31,6 +31,7 @@ const fake: ToolServices = {
     }),
   },
   edgar: { collect: async () => ({ ...empty, items: [{ concept: "Revenues", valueUsd: 1000, fiscalYear: 2025, form: "10-K", periodEnd: "2025-12-31" }] }) },
+  dart: { collect: async () => ({ ...empty, items: [{ accountName: "매출액", amountKrw: 1000, fiscalYear: 2025 }] }) },
   reports: {
     submit: async (r) =>
       r.sections["business-model"]?.some((c) => c.type === "observed" && c.evidence.length === 0)
@@ -49,7 +50,7 @@ async function connect() {
 
 const text = (r: unknown): string => (r as { content: { text: string }[] }).content[0]!.text;
 
-test("server exposes the eight tools", async () => {
+test("server exposes the nine tools", async () => {
   const client = await connect();
   assert.deepEqual(client.getServerVersion(), SERVER_INFO);
   const names = (await client.listTools()).tools.map((t) => t.name).sort();
@@ -62,6 +63,7 @@ test("server exposes the eight tools", async () => {
       "collect_terms",
       "collect_ad_library",
       "collect_financials",
+      "collect_financials_kr",
       "analyze_company",
       "submit_report",
     ].sort(),

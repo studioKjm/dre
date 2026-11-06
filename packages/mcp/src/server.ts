@@ -2,7 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import type { Report } from "@dre/core";
 import type { Services } from "@dre/app";
-import { adLibraryInput, collectInput, edgarInput, pricingInput, submitInput } from "./schemas.js";
+import { adLibraryInput, collectInput, dartInput, edgarInput, pricingInput, submitInput } from "./schemas.js";
 
 export const SERVER_INFO = { name: "dre", version: "0.0.1" } as const;
 
@@ -23,6 +23,7 @@ export interface ToolServices {
   adlibrary: Pick<Services["adlibrary"], "collect">;
   company: Pick<Services["company"], "analyze">;
   edgar: Pick<Services["edgar"], "collect">;
+  dart: Pick<Services["dart"], "collect">;
   reports: Pick<Services["reports"], "submit">;
 }
 
@@ -121,6 +122,18 @@ export function createDreServer(services: ToolServices): McpServer {
       inputSchema: edgarInput,
     },
     ({ nameOrTicker }) => guarded(() => services.edgar.collect(nameOrTicker)),
+  );
+
+  server.registerTool(
+    "collect_financials_kr",
+    {
+      title: "Look up DART (Korean FSS) financial filings",
+      description:
+        "Korean equivalent of collect_financials: looks up a company's reported revenue (매출액) and net income (당기순이익) from Korea's DART electronic disclosure system (dart.fss.or.kr). Covers Korean public companies and large private ones required to file, including some that have no public pricing page at all (banks, payment companies). Requires a free API key (DRE_DART_API_KEY env var, sign up yourself at opendart.fss.or.kr — this tool cannot create that account for you); without one it returns an empty result with a warning rather than failing. Prefer the exact Korean legal name. Not finding a filing is expected and common (most companies aren't DART-listed), not an error." +
+        FALLBACK,
+      inputSchema: dartInput,
+    },
+    ({ companyName, year }) => guarded(() => services.dart.collect(companyName, { year })),
   );
 
   server.registerTool(
