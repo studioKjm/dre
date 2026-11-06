@@ -240,3 +240,29 @@
     작성했을 뿐 실제 키로 검증하지 못했다. 사용자가 키를 발급받아 DRE_DART_API_KEY에
     넣은 뒤 반드시 한 번 스모크 테스트가 필요하다 — EDGAR(ADR-007)처럼 "verified live"라고
     말할 수 없는 유일한 수집기다.
+
+- id: ADR-009
+  title: "archive.org CDX로 가격 변천사 추적 — REA에 없는 차별화 기능"
+  status: adopted
+  date: 2026-11-06
+  stacks: [nodejs, typescript]
+  context: |
+    로드맵 4순위. 지금까지 archive.org는 "막혔을 때 1회성 폴백"으로만 썼다(ADR-004).
+    그런데 CDX API(web.archive.org/cdx/search/cdx)를 쓰면 한 URL의 전체 저장 이력을
+    타임라인으로 볼 수 있다. 이건 REA도 할 수 없는 일이다 — REA는 바이너리의 "지금 상태"만
+    본다. "이 회사가 가격을 언제 얼마나 올렸는가" 같은 시계열 분석은 모방이 아니라
+    새로운 능력이다.
+  decision: |
+    data/src/wayback.ts에 fetchWaybackTimeline(CDX 조회, collapse=timestamp:6으로
+    근접 중복 제거)과 fetchWaybackSnapshot(스냅샷 하나를 id_ 접미사로 받아 아카이브
+    자체 UI 배너 없이 원본 HTML만 받음) 추가. logic/collectors/price-history.ts의
+    PriceHistoryCollector가 전체 타임라인에서 균등 간격으로 최대 N개(기본 6)를 뽑아
+    각각 extractPlanCandidates(ADR-004에서 만든 그 함수 그대로 재사용)를 돌린다.
+    새 MCP 도구: collect_price_history.
+  consequence: |
+    linear.app/pricing으로 실측: 2020-07의 Free/$8 2단 요금제가 2020-12에 $12 플랜이
+    추가되며 3단 구조로 바뀐 게 그대로 드러났다 — 진짜 가격 인상/개편 이력이다. 대가:
+    아카이브된 스냅샷은 그 시점의 정적 HTML이라, 그 페이지가 그 시점에 JS 렌더링이
+    필요했다면 당시에도 셸만 저장돼 있어 모든 시점이 비어 나올 수 있다(오류는 아니고
+    경고로 알린다). 이 숫자들은 inferred/추세용으로 쓰고 "그 날짜의 확정 가격"으로
+    단정하지 말아야 한다 — 도구 설명에도 명시했다.

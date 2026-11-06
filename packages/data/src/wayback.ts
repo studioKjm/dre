@@ -1,5 +1,53 @@
-import type { RawPage } from "@dre/core";
+import type { RawPage, WaybackSnapshotMeta } from "@dre/core";
 import { assertPublicUrl } from "./net-guard.js";
+
+/**
+ * CDX API로 특정 URL의 저장된 스냅샷 타임라인을 조회한다(실제 페이지 콘텐츠는 아니다).
+ * collapse=timestamp:6은 "연-월" 단위로 묶어 거의 같은 스냅샷을 중복으로 받지 않게 한다.
+ */
+export async function fetchWaybackTimeline(
+  url: string,
+  opts: { limit?: number; timeoutMs?: number; userAgent?: string } = {},
+): Promise<WaybackSnapshotMeta[]> {
+  const { limit = 20, timeoutMs = 15_000, userAgent = "DREBot" } = opts;
+  const cdxUrl =
+    `https://web.archive.org/cdx/search/cdx?url=${encodeURIComponent(url)}` +
+    `&output=json&filter=statuscode:200&collapse=timestamp:6&limit=${limit}`;
+  await assertPublicUrl(cdxUrl);
+  try {
+    const res = await fetch(cdxUrl, { headers: { "user-agent": userAgent }, signal: AbortSignal.timeout(timeoutMs) });
+    if (!res.ok) return [];
+    const rows = (await res.json()) as string[][];
+    // 첫 행은 컬럼 헤더("urlkey","timestamp","original",...)다.
+    return rows.slice(1).map(([, timestamp, originalUrl]) => ({ timestamp: timestamp!, originalUrl: originalUrl! }));
+  } catch {
+    return [];
+  }
+}
+
+/** timestamp가 가리키는 스냅샷 하나를 실제로 가져온다 (id_ 접미사로 아카이브 자체 UI 배너 없이 받는다). */
+export async function fetchWaybackSnapshot(
+  meta: WaybackSnapshotMeta,
+  opts: { timeoutMs?: number; userAgent?: string } = {},
+): Promise<RawPage | null> {
+  const { timeoutMs = 15_000, userAgent = "DREBot" } = opts;
+  const snapshotUrl = `https://web.archive.org/web/${meta.timestamp}id_/${meta.originalUrl}`;
+  await assertPublicUrl(snapshotUrl);
+  try {
+    const res = await fetch(snapshotUrl, { headers: { "user-agent": userAgent }, signal: AbortSignal.timeout(timeoutMs) });
+    if (res.status >= 400) return null;
+    return {
+      url: meta.originalUrl,
+      finalUrl: `https://web.archive.org/web/${meta.timestamp}/${meta.originalUrl}`,
+      status: res.status,
+      contentType: res.headers.get("content-type") ?? "",
+      body: await res.text(),
+      retrievedAt: new Date().toISOString(),
+    };
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Internet Archive(Wayback Machine)에서 대상 URL의 최신 스냅샷을 찾아 가져온다.

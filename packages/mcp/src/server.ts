@@ -2,7 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import type { Report } from "@dre/core";
 import type { Services } from "@dre/app";
-import { adLibraryInput, collectInput, dartInput, edgarInput, pricingInput, submitInput } from "./schemas.js";
+import { adLibraryInput, collectInput, dartInput, edgarInput, priceHistoryInput, pricingInput, submitInput } from "./schemas.js";
 
 export const SERVER_INFO = { name: "dre", version: "0.0.1" } as const;
 
@@ -24,6 +24,7 @@ export interface ToolServices {
   company: Pick<Services["company"], "analyze">;
   edgar: Pick<Services["edgar"], "collect">;
   dart: Pick<Services["dart"], "collect">;
+  priceHistory: Pick<Services["priceHistory"], "collect">;
   reports: Pick<Services["reports"], "submit">;
 }
 
@@ -134,6 +135,17 @@ export function createDreServer(services: ToolServices): McpServer {
       inputSchema: dartInput,
     },
     ({ companyName, year }) => guarded(() => services.dart.collect(companyName, { year })),
+  );
+
+  server.registerTool(
+    "collect_price_history",
+    {
+      title: "Track how a page's pricing changed over time (archive.org)",
+      description:
+        "Something REA-style tools don't do: samples several archive.org snapshots of a URL spread across its full archived history (default 6, evenly spaced) and extracts price-like text from each, so you can see how pricing/plans evolved over months or years, not just the current state. Each snapshot is a best-effort regex extraction like collect_pricing's 'items' - if a snapshot shows zero items, the page may have needed JS rendering at that point in time (archived snapshots are static). Use this for narrative/trend claims (inferred), not as precise historical facts.",
+      inputSchema: priceHistoryInput,
+    },
+    ({ url, maxSnapshots }) => guarded(() => services.priceHistory.collect(url, { maxSnapshots })),
   );
 
   server.registerTool(

@@ -16,6 +16,12 @@ export interface RawProduct {
   priceText: string;
 }
 
+/** archive.org CDX 조회로 얻은 스냅샷 메타데이터 (콘텐츠 자체는 아니다) */
+export interface WaybackSnapshotMeta {
+  timestamp: string; // "YYYYMMDDhhmmss"
+  originalUrl: string;
+}
+
 /** 사용자가 직접 라벨링한 정답 (AC-008) */
 export interface GoldLabel {
   targetUrl: string;

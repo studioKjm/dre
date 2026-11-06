@@ -2,6 +2,8 @@ import { ApiKeyMissing, type RobotsResult } from "@dre/core";
 import {
   ReportStore,
   fetchFromWayback,
+  fetchWaybackSnapshot,
+  fetchWaybackTimeline,
   fetchFinancialStatement as fetchDartFinancialStatement,
   fetchPage,
   fetchRobots,
@@ -20,6 +22,7 @@ import {
   CrawlPolicy,
   DartCollector,
   EdgarCollector,
+  PriceHistoryCollector,
   PricingCollector,
   ReportService,
   TechStackCollector,
@@ -74,6 +77,10 @@ export function createServices(opts: ServiceOptions = {}) {
     render: (url: string) => renderPage(url, { userAgent, allowPrivate: allowPrivateNetwork, onNavigate: recheck }),
   };
   const archive = { get: (url: string) => fetchFromWayback(url, { userAgent }) };
+  const priceHistory = new PriceHistoryCollector({
+    fetchTimeline: (url) => fetchWaybackTimeline(url, { userAgent }),
+    fetchSnapshot: (meta) => fetchWaybackSnapshot(meta, { userAgent }),
+  });
   const store = new ReportStore(reportsDir);
 
   const pricing = new PricingCollector(fetcher, policy, renderer, archive);
@@ -101,6 +108,7 @@ export function createServices(opts: ServiceOptions = {}) {
     adlibrary,
     edgar,
     dart,
+    priceHistory,
     company: new CompanyAnalyzer(pricing, terms, techstack, adlibrary),
     reports: new ReportService(store),
     /** 저장된 리포트 디렉터리와 정답표 디렉터리를 비교한다. */
