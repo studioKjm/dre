@@ -43,7 +43,9 @@ export class AdLibraryCollector {
     // 숫자 파싱은 하지 않는다 — Google UI 언어가 바뀌면 깨지기 쉽고, 틀린 숫자를 "관측값"이라고
     // 주장하는 게 더 위험하다. 전체 텍스트를 주고 호출하는 에이전트가 직접 읽게 한다
     // (ADR-004와 같은 원칙: 정규식보다 LLM이 이런 텍스트를 더 잘 읽는다).
-    const adCountText = /광고\s*약\s*[\d,]+\s*개|about\s+[\d,]+\s+ads?/i.exec(text)?.[0];
+    // Google은 숫자가 클 때만 "약"(approximately)을 붙이고, 0개나 작은 정확한 값은 "약" 없이
+    // "광고 N개"라고만 쓴다 (실사이트로 확인: pay.naver.com="광고 0개", kakaobank.com="광고 56개").
+    const adCountText = /광고\s*(?:약\s*)?[\d,]+\s*개|about\s+[\d,]+\s+ads?|\b[\d,]+\s+ads?\b/i.exec(text)?.[0];
     const items: AdLibraryHit[] = adCountText ? [{ adCountText }] : [];
     if (!adCountText) {
       warnings.push(

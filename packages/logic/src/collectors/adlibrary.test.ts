@@ -57,3 +57,19 @@ test("propagates AutomationBlocked unchanged (no static fallback exists for this
   const renderer: PageRenderer = { render: async () => { throw new AutomationBlocked("u", 'title="blocked"'); } };
   await assert.rejects(new AdLibraryCollector(renderer, allowAll()).collect("notion.com"), AutomationBlocked);
 });
+
+test("extracts an exact (non-approximate) Korean ad-count phrase (Google omits '약' for small/zero counts)", async () => {
+  const zero = { render: async () => rendered("광고 0개") } as PageRenderer;
+  const r0 = await new AdLibraryCollector(zero, allowAll()).collect("a.com");
+  assert.deepEqual(r0.items, [{ adCountText: "광고 0개" }]);
+
+  const some = { render: async () => rendered("광고 56개\n주식회사 일그램") } as PageRenderer;
+  const r1 = await new AdLibraryCollector(some, allowAll()).collect("a.com");
+  assert.deepEqual(r1.items, [{ adCountText: "광고 56개" }]);
+});
+
+test("extracts a bare English count phrase without 'about'", async () => {
+  const renderer = { render: async () => rendered("5 ads found") } as PageRenderer;
+  const r = await new AdLibraryCollector(renderer, allowAll()).collect("a.com");
+  assert.deepEqual(r.items, [{ adCountText: "5 ads" }]);
+});
