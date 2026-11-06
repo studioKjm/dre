@@ -288,3 +288,31 @@
     notion(slug 추정)은 매치 없음으로 정직하게 보고됐다(Notion은 다른 ATS를 쓰는 것으로
     보인다). 대가: slug가 회사 도메인과 다른 경우가 많아(예: stripe.com ≠ slug
     "stripe") 에이전트가 slug를 추측하거나 검색해야 한다 — domain 자동 매핑은 하지 않았다.
+
+- id: ADR-011
+  title: "npm 배포 단위를 esbuild 번들 하나로 — 실제 publish는 보류"
+  status: adopted
+  date: 2026-11-07
+  stacks: [nodejs, typescript]
+  context: |
+    로드맵 6순위, 마지막 단계. REA의 'npx rea-agents setup' 같은 설치 UX를 만들려 했다.
+    그런데 DRE는 @dre/core·data·logic·app·mcp 5개 내부 패키지로 나뉜 모노레포라, 그대로
+    publish하면 서로를 찾지 못한다. 또한 이 머신에 npm 로그인이 안 돼 있었고(npm whoami
+    확인), 로그인/계정 생성은 대신 해줄 수 없다는 원칙이 있어 실제 publish는 사용자 몫으로
+    남겼다.
+  decision: |
+    새 패키지 packages/dre-agents(공개명 "dre-agents", npm 확인 결과 미점유)를 만들고,
+    esbuild(0.28.2, devDependency, 승인받음)로 내부 @dre/* 코드만 두 파일(dist/cli.js,
+    dist/mcp-server.js)로 번들링한다. 서드파티 의존성(@modelcontextprotocol/sdk, zod, yaml,
+    adm-zip)은 번들에 넣지 않고 dre-agents의 진짜 npm dependencies로 선언한다 — 처음에
+    전부 번들링했더니 ESM 출력에서 CJS 패키지의 동적 require를 esbuild가 처리 못 해
+    "Dynamic require of process is not supported" 오류가 났다(실제로 재현·확인). puppeteer-core는
+    optionalDependencies로 — 자체 설치 스크립트가 있어 번들에 넣지 않는다.
+    CLI의 `dre-agents setup`은 `claude mcp add`를 호출해 MCP 서버를 등록한다(--project로
+    프로젝트 범위 선택 가능).
+  consequence: |
+    npm pack --dry-run으로 확인: 패키지 전체가 27KB(언팩 84KB), 파일 5개(cli.js, mcp-server.js,
+    package.json, README, LICENSE)뿐이다. CLI 사용법 출력과 MCP 서버 기동("dre mcp server
+    ready")을 로컬에서 실제로 확인했다. 대가: 실제 'npm publish'는 이 세션에서 하지 않았다 —
+    사용자가 npm 계정으로 로그인한 뒤 packages/dre-agents에서 직접 실행해야 한다. 또한
+    5개 내부 패키지가 바뀔 때마다 이 번들을 다시 만들어야 한다(자동 CI 연결은 안 했다).
