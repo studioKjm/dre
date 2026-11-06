@@ -266,3 +266,25 @@
     필요했다면 당시에도 셸만 저장돼 있어 모든 시점이 비어 나올 수 있다(오류는 아니고
     경고로 알린다). 이 숫자들은 inferred/추세용으로 쓰고 "그 날짜의 확정 가격"으로
     단정하지 말아야 한다 — 도구 설명에도 명시했다.
+
+- id: ADR-010
+  title: "채용공고(Greenhouse/Lever) 수집기 — 팀 규모·성장 단계의 간접 신호"
+  status: adopted
+  date: 2026-11-07
+  stacks: [nodejs, typescript]
+  context: |
+    로드맵 5순위. 채용공고는 지원자가 봐야 하므로 사실상 차단되지 않는, 거의 유일한
+    "회사 내부 정보" 소스다. Greenhouse(boards-api.greenhouse.io)와 Lever(api.lever.co)
+    모두 공개 JSON API를 제공하고, robots.txt는 일부 경로만 막는다(2026-11-07 확인).
+  decision: |
+    data/src/jobboards.ts: fetchGreenhouseJobs/fetchLeverJobs가 각 공개 JSON API를
+    호출한다. 둘 다 없거나 404면 오류가 아니라 null — 대부분의 회사는 둘 중 어느 것도
+    안 쓴다. logic/collectors/jobs.ts의 JobBoardCollector가 두 소스를 합쳐 제목·지역·
+    출처를 구조화하고, 미리보기는 30개로 자르되 items 전체는 그대로 둔다. 설명문 본문은
+    가져오지 않는다 — ADR-004 원칙대로 가볍게 주고 필요하면 에이전트가 evidence URL로
+    더 들어가게 한다. 새 MCP 도구: collect_jobs.
+  consequence: |
+    실사이트 검증: stripe(slug)에서 공고 768개 — 회사 규모를 보여주는 직접적인 신호다.
+    notion(slug 추정)은 매치 없음으로 정직하게 보고됐다(Notion은 다른 ATS를 쓰는 것으로
+    보인다). 대가: slug가 회사 도메인과 다른 경우가 많아(예: stripe.com ≠ slug
+    "stripe") 에이전트가 slug를 추측하거나 검색해야 한다 — domain 자동 매핑은 하지 않았다.

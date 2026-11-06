@@ -2,7 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import type { Report } from "@dre/core";
 import type { Services } from "@dre/app";
-import { adLibraryInput, collectInput, dartInput, edgarInput, priceHistoryInput, pricingInput, submitInput } from "./schemas.js";
+import { adLibraryInput, collectInput, dartInput, edgarInput, jobsInput, priceHistoryInput, pricingInput, submitInput } from "./schemas.js";
 
 export const SERVER_INFO = { name: "dre", version: "0.0.1" } as const;
 
@@ -25,6 +25,7 @@ export interface ToolServices {
   edgar: Pick<Services["edgar"], "collect">;
   dart: Pick<Services["dart"], "collect">;
   priceHistory: Pick<Services["priceHistory"], "collect">;
+  jobs: Pick<Services["jobs"], "collect">;
   reports: Pick<Services["reports"], "submit">;
 }
 
@@ -146,6 +147,18 @@ export function createDreServer(services: ToolServices): McpServer {
       inputSchema: priceHistoryInput,
     },
     ({ url, maxSnapshots }) => guarded(() => services.priceHistory.collect(url, { maxSnapshots })),
+  );
+
+  server.registerTool(
+    "collect_jobs",
+    {
+      title: "Look up open job postings (Greenhouse/Lever)",
+      description:
+        "Fetch open job postings from a company's Greenhouse or Lever applicant tracking system (ATS), if they use one. These are public by design (applicants need to find them), so this is essentially never blocked. Job titles/departments/locations are a proxy for team size and growth stage; some job descriptions mention concrete business metrics directly, though this tool only returns title+location, not full descriptions - fetch the evidence URL yourself for more. The slug is the ATS identifier, which is usually NOT the company's domain (e.g. 'stripe', not 'stripe.com') - you may need to search for it. No match (null for both boards) is common and not an error - most companies don't use either ATS." +
+        FALLBACK,
+      inputSchema: jobsInput,
+    },
+    ({ slug }) => guarded(() => services.jobs.collect(slug)),
   );
 
   server.registerTool(

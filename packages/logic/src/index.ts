@@ -10,6 +10,7 @@ export * from "./collectors/adlibrary.js";
 export * from "./collectors/edgar.js";
 export * from "./collectors/dart.js";
 export * from "./collectors/price-history.js";
+export * from "./collectors/jobs.js";
 export * from "./company-analyzer.js";
 export * from "./techstack.js";
 export * from "./report-service.js";

@@ -2,6 +2,8 @@ import { ApiKeyMissing, type RobotsResult } from "@dre/core";
 import {
   ReportStore,
   fetchFromWayback,
+  fetchGreenhouseJobs,
+  fetchLeverJobs,
   fetchWaybackSnapshot,
   fetchWaybackTimeline,
   fetchFinancialStatement as fetchDartFinancialStatement,
@@ -22,6 +24,7 @@ import {
   CrawlPolicy,
   DartCollector,
   EdgarCollector,
+  JobBoardCollector,
   PriceHistoryCollector,
   PricingCollector,
   ReportService,
@@ -81,6 +84,10 @@ export function createServices(opts: ServiceOptions = {}) {
     fetchTimeline: (url) => fetchWaybackTimeline(url, { userAgent }),
     fetchSnapshot: (meta) => fetchWaybackSnapshot(meta, { userAgent }),
   });
+  const jobs = new JobBoardCollector({
+    fetchGreenhouseJobs: (slug) => fetchGreenhouseJobs(slug, { userAgent }),
+    fetchLeverJobs: (slug) => fetchLeverJobs(slug, { userAgent }),
+  });
   const store = new ReportStore(reportsDir);
 
   const pricing = new PricingCollector(fetcher, policy, renderer, archive);
@@ -109,6 +116,7 @@ export function createServices(opts: ServiceOptions = {}) {
     edgar,
     dart,
     priceHistory,
+    jobs,
     company: new CompanyAnalyzer(pricing, terms, techstack, adlibrary),
     reports: new ReportService(store),
     /** 저장된 리포트 디렉터리와 정답표 디렉터리를 비교한다. */

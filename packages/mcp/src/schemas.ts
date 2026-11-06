@@ -59,3 +59,5 @@ export const edgarInput = { nameOrTicker: z.string().min(1).describe("company le
 export const dartInput = { companyName: z.string().min(1).describe("exact Korean legal name preferred (e.g. '카카오페이'), partial match attempted"), year: z.number().int().optional().describe("fiscal year, default: last year") };
 
 export const priceHistoryInput = { url: urlSchema, maxSnapshots: z.number().int().min(1).max(20).optional().describe("default 6") };
+
+export const jobsInput = { slug: z.string().min(1).describe("ATS board slug, usually not the same as the domain (e.g. company 'stripe.com' uses Greenhouse slug 'stripe' -> boards.greenhouse.io/stripe)") };
