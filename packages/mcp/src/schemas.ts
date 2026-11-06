@@ -53,3 +53,5 @@ export const reportSchema = z.object({
 export const submitInput = { report: reportSchema };
 
 export const adLibraryInput = { domain: z.string().min(1).describe("bare domain, e.g. 'notion.com' (no scheme/path)"), region: z.string().length(2).optional().describe("ISO 3166-1 alpha-2 country code, default US") };
+
+export const edgarInput = { nameOrTicker: z.string().min(1).describe("company legal name (partial match ok) or exact stock ticker, e.g. 'Airbnb' or 'ABNB'") };

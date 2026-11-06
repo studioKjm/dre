@@ -181,3 +181,34 @@
     대가: 가격 링크 탐색이 교차 출처까지 허용해, 페이지에 있는 아무 "pricing" 류 링크를
     실제로는 무관한 제3자 사이트로 오인해 따라갈 이론적 여지가 생겼다 — 발생 시 evidence.url로
     바로 드러나므로 치명적이지는 않다고 판단했다.
+
+- id: ADR-007
+  title: "SEC EDGAR 재무공시 연동 — 가격 페이지가 없는 회사도 수익 숫자를 얻는다"
+  status: adopted
+  date: 2026-11-06
+  stacks: [nodejs, typescript]
+  context: |
+    "비용 없이 REA 수준으로" 로드맵 2순위. 토스 경쟁사(카카오페이·카카오뱅크) 분석이
+    완전히 막혔던 근본 이유는 "가격 페이지 자체가 없는 회사"였다는 것이다. 그런데 미국
+    상장사는 분기/연간 재무제표를 SEC에 의무 공시한다. SEC EDGAR(data.sec.gov,
+    www.sec.gov)는 완전 무료고 키 발급도 필요 없다 — 다만 robots.txt가 막는 게 아니라
+    "자신을 밝히라"는 공개 정책이 있다: User-Agent에 조직명과 연락처(이메일 형식)를 넣지
+    않으면 403이 난다(2026-11-06 확인). 이건 봇 차단이 아니라 SEC가 명시한 공정이용
+    요구사항이라, 형식을 맞추는 것이지 우회가 아니다.
+  decision: |
+    data/src/edgar.ts: company_tickers.json(티커→CIK 매핑, 매일 갱신되는 공개 정적 파일)과
+    companyfacts API(XBRL 재무 데이터 전체)를 호출하는 순수 함수. logic/collectors/edgar.ts의
+    EdgarCollector가 회사명/티커로 CIK를 찾고, 가장 최근 연간(10-K, FY) 매출·순이익을 뽑는다.
+    매출 태그는 회계기준 변경으로 여러 개(Revenues, RevenueFromContractWithCustomer...)가
+    쓰이므로 우선순위를 두고 첫 번째로 데이터가 있는 것만 쓴다. 상장사가 아니면(대부분의
+    분석 대상이 그렇다) 오류가 아니라 빈 결과 + "비상장으로 보임" 경고를 낸다.
+    User-Agent 기본값은 "DRE-open-source-tool contact@example.com"이고,
+    DRE_SEC_USER_AGENT 환경변수로 사용자 본인 연락처로 바꿀 수 있다(바꾸는 것을 권장).
+  consequence: |
+    실사이트 검증: Airbnb(매출 $122.4억, 순이익 $25.1억, FY2025), Duolingo(매출 $10.4억,
+    순이익 $4.1억, FY2025) 모두 정확히 나왔다 — 이 숫자들은 지난 AC-008 라운드에서
+    에이전트들이 뉴스 기사로 추정해야 했던 바로 그 값들이고, 이제는 1차 공시 자료로
+    직접 얻는다. Notion처럼 비상장사는 "SEC filer 없음"으로 정직하게 보고된다.
+    MCP 도구가 7개에서 8개(collect_financials)로 늘었다. 대가: 미국 상장사와 (companyfacts
+    API가 커버하는) 일부 대형 비상장 필러만 다루고, 카카오페이 같은 한국 회사는 여전히
+    범위 밖이다 — DART 연동(3순위)이 그 공백을 메운다.

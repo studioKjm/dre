@@ -1,10 +1,11 @@
 import type { RobotsResult } from "@dre/core";
-import { ReportStore, fetchFromWayback, fetchPage, fetchRobots, loadGold, parseAppStore, parsePlay, renderPage } from "@dre/data";
+import { ReportStore, fetchFromWayback, fetchPage, fetchRobots, findCik, fetchCompanyFacts, loadGold, parseAppStore, parsePlay, renderPage } from "@dre/data";
 import {
   AdLibraryCollector,
   AppStoreCollector,
   CompanyAnalyzer,
   CrawlPolicy,
+  EdgarCollector,
   PricingCollector,
   ReportService,
   TechStackCollector,
@@ -18,6 +19,11 @@ export interface ServiceOptions {
   userAgent?: string;
   /** 사설/루프백 주소 수집 허용. 로컬 개발·테스트 전용이며 기본은 DRE_ALLOW_PRIVATE_NETWORK=1일 때만 true. */
   allowPrivateNetwork?: boolean;
+  /**
+   * SEC EDGAR가 요구하는 형식("조직명 연락처"). 기본값으로도 동작하지만, SEC 정책상 본인
+   * 연락처를 넣는 것이 원칙에 더 맞다. DRE_SEC_USER_AGENT 환경변수로 바꿀 수 있다.
+   */
+  secUserAgent?: string;
 }
 
 /** Data 구현체를 Logic 포트에 연결하는 유일한 조립 지점. Presentation은 이 객체만 사용한다. */
@@ -26,6 +32,7 @@ export function createServices(opts: ServiceOptions = {}) {
     reportsDir = "reports",
     userAgent = "DREBot",
     allowPrivateNetwork = process.env.DRE_ALLOW_PRIVATE_NETWORK === "1",
+    secUserAgent = process.env.DRE_SEC_USER_AGENT ?? "DRE-open-source-tool contact@example.com",
   } = opts;
 
   const robotsCache = new Map<string, Promise<RobotsResult>>();
@@ -56,6 +63,10 @@ export function createServices(opts: ServiceOptions = {}) {
   const terms = new TermsCollector(fetcher, policy);
   const techstack = new TechStackCollector(fetcher, policy);
   const adlibrary = new AdLibraryCollector(renderer, policy);
+  const edgar = new EdgarCollector({
+    findCik: (n) => findCik(n, { userAgent: secUserAgent }),
+    fetchCompanyFacts: (cik) => fetchCompanyFacts(cik, { userAgent: secUserAgent }),
+  });
 
   return {
     pricing,
@@ -63,6 +74,7 @@ export function createServices(opts: ServiceOptions = {}) {
     terms,
     techstack,
     adlibrary,
+    edgar,
     company: new CompanyAnalyzer(pricing, terms, techstack, adlibrary),
     reports: new ReportService(store),
     /** 저장된 리포트 디렉터리와 정답표 디렉터리를 비교한다. */

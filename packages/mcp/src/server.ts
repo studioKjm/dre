@@ -2,7 +2,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import type { Report } from "@dre/core";
 import type { Services } from "@dre/app";
-import { adLibraryInput, collectInput, pricingInput, submitInput } from "./schemas.js";
+import { adLibraryInput, collectInput, edgarInput, pricingInput, submitInput } from "./schemas.js";
 
 export const SERVER_INFO = { name: "dre", version: "0.0.1" } as const;
 
@@ -22,6 +22,7 @@ export interface ToolServices {
   techstack: Pick<Services["techstack"], "collect">;
   adlibrary: Pick<Services["adlibrary"], "collect">;
   company: Pick<Services["company"], "analyze">;
+  edgar: Pick<Services["edgar"], "collect">;
   reports: Pick<Services["reports"], "submit">;
 }
 
@@ -108,6 +109,18 @@ export function createDreServer(services: ToolServices): McpServer {
       inputSchema: adLibraryInput,
     },
     ({ domain, region }) => guarded(() => services.company.analyze(domain, { region })),
+  );
+
+  server.registerTool(
+    "collect_financials",
+    {
+      title: "Look up SEC EDGAR financial filings (US public companies only)",
+      description:
+        "Look up a company's actual reported revenue and net income from its most recent annual (10-K) filing with the US SEC, via EDGAR's free XBRL data (data.sec.gov) — no scraping, no bot blocking, authoritative government filings. Only works for US-listed public companies (and some large private filers); for anything else this returns an empty 'items' with a warning, which is an expected, non-error outcome — most companies you'll analyze are private and simply have no SEC filings. Figures are in USD. If present, prefer this over inferring revenue from a pricing page." +
+        FALLBACK,
+      inputSchema: edgarInput,
+    },
+    ({ nameOrTicker }) => guarded(() => services.edgar.collect(nameOrTicker)),
   );
 
   server.registerTool(
