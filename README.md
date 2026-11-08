@@ -16,8 +16,7 @@ npx dre-agents setup
 ```
 
 Registers the DRE MCP server with [Claude Code](https://claude.com/claude-code). Open a new
-session and the tools below appear automatically. (Not yet published — see
-`packages/dre-agents/README.md` for the local build/pack steps in the meantime.)
+session and the tools below appear automatically.
 
 ## Tools
 
