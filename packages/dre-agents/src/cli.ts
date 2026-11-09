@@ -28,6 +28,7 @@ function setup(): void {
     { name: "claude", detect: () => hasCli("claude"), register: () => registerClaudeCode(scope) },
     { name: "cursor", detect: () => existsSync(join(homedir(), ".cursor")), register: () => registerCursor(scope) },
     { name: "gemini", detect: () => existsSync(join(homedir(), ".gemini")) || hasCli("gemini"), register: () => registerGemini() },
+    { name: "codex", detect: () => existsSync(join(homedir(), ".codex")) || hasCli("codex"), register: () => registerCodex() },
   ];
 
   const targets = requested
@@ -40,8 +41,8 @@ function setup(): void {
     console.error(
       requested
         ? `알 수 없는 --agent 값입니다. 지원: ${agents.map((a) => a.name).join(", ")}, all`
-        : "설치된 에이전트(Claude Code / Cursor / Gemini CLI)를 찾지 못했습니다. " +
-            "--agent=claude|cursor|gemini|all 로 직접 지정하세요.",
+        : "설치된 에이전트(Claude Code / Cursor / Gemini CLI / Codex)를 찾지 못했습니다. " +
+            "--agent=claude|cursor|gemini|codex|all 로 직접 지정하세요.",
     );
     process.exit(1);
   }
@@ -122,6 +123,57 @@ function registerGemini(): void {
   });
 }
 
+/**
+ * Codex CLI는 설정이 TOML(~/.codex/config.toml)이다. 범용 파서 없이, 우리가 쓰는
+ * `[mcp_servers.dre]` 테이블 하나만 찾아서 교체하거나 끝에 덧붙인다 — 다음 `[`로
+ * 시작하는 줄 전까지를 "우리 테이블"로 보고, 그 밖의 내용은 손대지 않는다.
+ */
+function tomlValue(val: unknown): string {
+  if (typeof val === "string") return JSON.stringify(val);
+  if (Array.isArray(val)) return `[${val.map(tomlValue).join(", ")}]`;
+  if (val && typeof val === "object") {
+    const entries = Object.entries(val as Record<string, unknown>).map(([k, v]) => `${k} = ${tomlValue(v)}`);
+    return `{ ${entries.join(", ")} }`;
+  }
+  return String(val);
+}
+
+function upsertTomlTable(configPath: string, tableName: string, fields: Record<string, unknown>): void {
+  mkdirSync(dirname(configPath), { recursive: true });
+
+  let lines: string[] = [];
+  if (existsSync(configPath)) {
+    copyFileSync(configPath, `${configPath}.bak`);
+    lines = readFileSync(configPath, "utf-8").split("\n");
+  }
+
+  const header = `[${tableName}]`;
+  const block = [header, ...Object.entries(fields).map(([k, v]) => `${k} = ${tomlValue(v)}`)];
+
+  const startIdx = lines.findIndex((l) => l.trim() === header);
+  let newLines: string[];
+  if (startIdx === -1) {
+    const existing = lines.join("\n").replace(/\s+$/, "");
+    newLines = (existing ? [...existing.split("\n"), ""] : []).concat(block);
+  } else {
+    let endIdx = startIdx + 1;
+    while (endIdx < lines.length && !lines[endIdx].trim().startsWith("[")) endIdx++;
+    newLines = [...lines.slice(0, startIdx), ...block, ...lines.slice(endIdx)];
+  }
+
+  writeFileSync(configPath, `${newLines.join("\n").replace(/\s+$/, "")}\n`);
+}
+
+function registerCodex(): void {
+  const configPath = join(homedir(), ".codex", "config.toml");
+  console.log(`[codex] DRE MCP 서버를 등록합니다 (${configPath})... (프로젝트 범위는 지원하지 않습니다)`);
+  upsertTomlTable(configPath, "mcp_servers.dre", {
+    command: "node",
+    args: [mcpServerPath],
+    env: { DRE_REPORTS_DIR: reportsDir },
+  });
+}
+
 function runMcpServer(): void {
   execFileSync(process.execPath, [mcpServerPath, ...rest], { stdio: "inherit" });
 }
@@ -137,7 +189,7 @@ switch (cmd) {
     console.log("사용법: dre-agents <setup|mcp>");
     console.log("  setup  DRE MCP 서버를 에이전트에 등록합니다");
     console.log("           --project           Claude Code/Cursor를 프로젝트 범위로 등록 (기본: 사용자 범위)");
-    console.log("           --agent=<목록|all>   설치 감지를 건너뛰고 claude,cursor,gemini 중 지정 (쉼표 구분)");
+    console.log("           --agent=<목록|all>   설치 감지를 건너뛰고 claude,cursor,gemini,codex 중 지정 (쉼표 구분)");
     console.log("  mcp    MCP 서버를 직접 실행합니다 (보통 setup이 자동으로 연결하므로 직접 쓸 일은 적습니다)");
     process.exit(cmd ? 1 : 0);
 }

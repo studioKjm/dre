@@ -13,12 +13,12 @@ npx dre-agents setup
 ```
 
 This auto-detects installed agents — [Claude Code](https://claude.com/claude-code), Cursor,
-Gemini CLI — and registers the DRE MCP server with each. Open a new session and tools like
-`collect_pricing`, `analyze_company`, `collect_financials` appear automatically.
+Gemini CLI, Codex — and registers the DRE MCP server with each. Open a new session and tools
+like `collect_pricing`, `analyze_company`, `collect_financials` appear automatically.
 
 Options:
-- `npx dre-agents setup --agent=claude,cursor,gemini` — skip detection, target specific agents (or `--agent=all`)
-- `npx dre-agents setup --project` — register Claude Code/Cursor for the current project only (default: all projects; Gemini CLI is user-scope only)
+- `npx dre-agents setup --agent=claude,cursor,gemini,codex` — skip detection, target specific agents (or `--agent=all`)
+- `npx dre-agents setup --project` — register Claude Code/Cursor for the current project only (default: all projects; Gemini CLI and Codex are user-scope only)
 
 ## What it does
 
