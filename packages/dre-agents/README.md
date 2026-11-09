@@ -12,11 +12,13 @@ The business-side counterpart to [REA](https://github.com/morluto/rea), which co
 npx dre-agents setup
 ```
 
-This registers the DRE MCP server with [Claude Code](https://claude.com/claude-code). Open a new
-session and tools like `collect_pricing`, `analyze_company`, `collect_financials` appear automatically.
+This auto-detects installed agents — [Claude Code](https://claude.com/claude-code), Cursor,
+Gemini CLI — and registers the DRE MCP server with each. Open a new session and tools like
+`collect_pricing`, `analyze_company`, `collect_financials` appear automatically.
 
 Options:
-- `npx dre-agents setup --project` — register for the current project only (default: all projects)
+- `npx dre-agents setup --agent=claude,cursor,gemini` — skip detection, target specific agents (or `--agent=all`)
+- `npx dre-agents setup --project` — register Claude Code/Cursor for the current project only (default: all projects; Gemini CLI is user-scope only)
 
 ## What it does
 

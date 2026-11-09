@@ -1,39 +1,125 @@
 #!/usr/bin/env node
 import { execFileSync } from "node:child_process";
+import { existsSync, mkdirSync, readFileSync, writeFileSync, copyFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const [cmd, ...rest] = process.argv.slice(2);
 const mcpServerPath = fileURLToPath(new URL("./mcp-server.js", import.meta.url));
+const reportsDir = `${process.cwd()}/reports`;
 
-function hasClaudeCli(): boolean {
+function hasCli(bin: string): boolean {
   try {
-    execFileSync("claude", ["--version"], { stdio: "ignore" });
+    execFileSync(bin, ["--version"], { stdio: "ignore" });
     return true;
   } catch {
     return false;
   }
 }
 
-/** REA의 `npx rea-agents setup`과 같은 자리 — Claude Code에 DRE MCP 서버를 등록한다. */
+/** REA의 `npx rea-agents setup`과 같은 자리 — DRE MCP 서버를 agent별 설정에 등록한다. */
 function setup(): void {
-  if (!hasClaudeCli()) {
-    console.error("Claude Code CLI('claude')를 찾을 수 없습니다. https://claude.com/claude-code 설치 후 다시 시도하세요.");
+  const scope = rest.includes("--project") ? "project" : "user";
+  const agentArg = rest.find((a) => a.startsWith("--agent="))?.split("=")[1];
+  const requested = agentArg ? agentArg.split(",") : null;
+
+  const agents: { name: string; detect: () => boolean; register: () => void }[] = [
+    { name: "claude", detect: () => hasCli("claude"), register: () => registerClaudeCode(scope) },
+    { name: "cursor", detect: () => existsSync(join(homedir(), ".cursor")), register: () => registerCursor(scope) },
+    { name: "gemini", detect: () => existsSync(join(homedir(), ".gemini")) || hasCli("gemini"), register: () => registerGemini() },
+  ];
+
+  const targets = requested
+    ? requested.includes("all")
+      ? agents
+      : agents.filter((a) => requested.includes(a.name))
+    : agents.filter((a) => a.detect());
+
+  if (targets.length === 0) {
+    console.error(
+      requested
+        ? `알 수 없는 --agent 값입니다. 지원: ${agents.map((a) => a.name).join(", ")}, all`
+        : "설치된 에이전트(Claude Code / Cursor / Gemini CLI)를 찾지 못했습니다. " +
+            "--agent=claude|cursor|gemini|all 로 직접 지정하세요.",
+    );
     process.exit(1);
   }
-  const scope = rest.includes("--project") ? "project" : "user";
-  console.log(`DRE MCP 서버를 Claude Code에 등록합니다 (scope: ${scope})...`);
+
+  const results: { name: string; ok: boolean }[] = [];
+  for (const agent of targets) {
+    try {
+      agent.register();
+      results.push({ name: agent.name, ok: true });
+    } catch (err) {
+      console.error(`[${agent.name}] 등록 실패: ${err instanceof Error ? err.message : err}`);
+      results.push({ name: agent.name, ok: false });
+    }
+  }
+
+  console.log("");
+  for (const r of results) console.log(`${r.ok ? "✓" : "✗"} ${r.name}`);
+  console.log("\n등록된 에이전트를 새 세션으로 열면 DRE 도구(collect_pricing 등)가 보입니다.");
+  console.log("DART(한국 금융감독원) 연동을 쓰려면 DRE_DART_API_KEY 환경변수를 설정하세요 (무료 가입: opendart.fss.or.kr).");
+
+  if (results.some((r) => !r.ok)) process.exit(1);
+}
+
+function registerClaudeCode(scope: "user" | "project"): void {
+  console.log(`[claude] DRE MCP 서버를 등록합니다 (scope: ${scope})...`);
   try {
     execFileSync(
       "claude",
-      ["mcp", "add", "dre", "-s", scope, "-e", `DRE_REPORTS_DIR=${process.cwd()}/reports`, "--", "node", mcpServerPath],
+      ["mcp", "add", "dre", "-s", scope, "-e", `DRE_REPORTS_DIR=${reportsDir}`, "--", "node", mcpServerPath],
       { stdio: "inherit" },
     );
-    console.log("\n완료. 새 Claude Code 세션을 열면 DRE 도구(collect_pricing 등)가 보입니다.");
-    console.log("DART(한국 금융감독원) 연동을 쓰려면 DRE_DART_API_KEY 환경변수를 설정하세요 (무료 가입: opendart.fss.or.kr).");
   } catch {
-    console.error("등록에 실패했습니다. 이미 등록돼 있다면 'claude mcp remove dre -s " + scope + "' 후 다시 시도하세요.");
-    process.exit(1);
+    throw new Error(`이미 등록돼 있다면 'claude mcp remove dre -s ${scope}' 후 다시 시도하세요.`);
   }
+}
+
+/** Cursor/Gemini CLI 공통 설정 형식: { mcpServers: { <name>: { command, args, env } } } */
+function writeJsonMcpConfig(configPath: string, serverName: string, serverConfig: Record<string, unknown>): void {
+  mkdirSync(dirname(configPath), { recursive: true });
+
+  let config: Record<string, unknown> = {};
+  if (existsSync(configPath)) {
+    const raw = readFileSync(configPath, "utf-8");
+    try {
+      config = JSON.parse(raw);
+      copyFileSync(configPath, `${configPath}.bak`);
+    } catch {
+      copyFileSync(configPath, `${configPath}.bak-corrupt-${Date.now()}`);
+      console.warn(`[경고] ${configPath} 파싱 실패 — 백업 후 새로 씁니다.`);
+      config = {};
+    }
+  }
+
+  const mcpServers = (config.mcpServers as Record<string, unknown> | undefined) ?? {};
+  mcpServers[serverName] = serverConfig;
+  config.mcpServers = mcpServers;
+
+  writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
+}
+
+function registerCursor(scope: "user" | "project"): void {
+  const configPath = scope === "project" ? join(process.cwd(), ".cursor", "mcp.json") : join(homedir(), ".cursor", "mcp.json");
+  console.log(`[cursor] DRE MCP 서버를 등록합니다 (${configPath})...`);
+  writeJsonMcpConfig(configPath, "dre", {
+    command: "node",
+    args: [mcpServerPath],
+    env: { DRE_REPORTS_DIR: reportsDir },
+  });
+}
+
+function registerGemini(): void {
+  const configPath = join(homedir(), ".gemini", "settings.json");
+  console.log(`[gemini] DRE MCP 서버를 등록합니다 (${configPath})... (프로젝트 범위는 지원하지 않습니다)`);
+  writeJsonMcpConfig(configPath, "dre", {
+    command: "node",
+    args: [mcpServerPath],
+    env: { DRE_REPORTS_DIR: reportsDir },
+  });
 }
 
 function runMcpServer(): void {
@@ -49,7 +135,9 @@ switch (cmd) {
     break;
   default:
     console.log("사용법: dre-agents <setup|mcp>");
-    console.log("  setup  Claude Code에 DRE MCP 서버를 등록합니다 (--project로 프로젝트 범위 등록)");
+    console.log("  setup  DRE MCP 서버를 에이전트에 등록합니다");
+    console.log("           --project           Claude Code/Cursor를 프로젝트 범위로 등록 (기본: 사용자 범위)");
+    console.log("           --agent=<목록|all>   설치 감지를 건너뛰고 claude,cursor,gemini 중 지정 (쉼표 구분)");
     console.log("  mcp    MCP 서버를 직접 실행합니다 (보통 setup이 자동으로 연결하므로 직접 쓸 일은 적습니다)");
     process.exit(cmd ? 1 : 0);
 }
