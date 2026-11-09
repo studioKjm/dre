@@ -1,5 +1,8 @@
 # DRE — Domain Reverse Engineering
 
+[![CI](https://github.com/studioKjm/dre/actions/workflows/ci.yml/badge.svg)](https://github.com/studioKjm/dre/actions/workflows/ci.yml)
+[![npm version](https://img.shields.io/npm/v/dre-agents?color=cb3837)](https://www.npmjs.com/package/dre-agents)
+
 Analyze the business and domain side of a reference site, platform, or product:
 business model, positioning, marketing, ads, tech stack, financials, and pricing history —
 with evidence and explicit uncertainty on every claim. The business-side counterpart to

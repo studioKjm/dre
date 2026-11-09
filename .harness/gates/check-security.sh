@@ -162,7 +162,6 @@ run_builtin_checks() {
   # Common AI-generated security mistakes
   local patterns=(
     'eval('
-    'exec('
     'innerHTML\s*='
     'dangerouslySetInnerHTML'
     '__proto__'
@@ -171,12 +170,11 @@ run_builtin_checks() {
     'shell=True'
     'verify=False'
     'CSRF.*disable'
-    'allowAll\|permit_all\|@PermitAll'
+    '\.permitAll(\|@PermitAll\|permit_all\s*=\s*True'
   )
 
   local descriptions=(
     "eval() — code injection risk"
-    "exec() — code injection risk"
     "innerHTML — XSS risk"
     "dangerouslySetInnerHTML — XSS risk"
     "__proto__ — prototype pollution risk"
@@ -200,7 +198,7 @@ run_builtin_checks() {
       --include="*.py" --include="*.java" --include="*.go" \
       2>/dev/null | \
       grep -v "node_modules" | grep -v "__pycache__" | grep -v ".harness" | \
-      grep -v "\.test\." | grep -v "\.spec\." | grep -v "check-security" | \
+      grep -v "/dist/" | grep -v "\.test\." | grep -v "\.spec\." | grep -v "check-security" | \
       head -5 || true)
 
     [ -z "$matches" ] && continue

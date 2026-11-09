@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  gates:
+    name: Harness gates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - run: npm ci
+
+      # Strengthens check-security.sh's SAST pass beyond the built-in grep
+      # patterns. Optional: the gate still runs (and still blocks on) its
+      # built-in checks if this install fails or is unavailable.
+      - name: Install semgrep
+        continue-on-error: true
+        run: pipx install semgrep
+
+      - run: .harness/gates/check-secrets.sh "$GITHUB_WORKSPACE"
+      - run: .harness/gates/check-boundaries.sh "$GITHUB_WORKSPACE"
+      - run: .harness/gates/check-structure.sh "$GITHUB_WORKSPACE"
+      - run: .harness/gates/check-spec.sh "$GITHUB_WORKSPACE"
+      - run: .harness/gates/check-layers.sh "$GITHUB_WORKSPACE"
+      - run: .harness/gates/check-security.sh "$GITHUB_WORKSPACE"
+      # --fail-on=critical, not high: see docs/adr.yaml ADR-012 — the only
+      # outstanding "high" finding is a GHSA false positive against zod v4
+      # internals that doesn't apply to the zod v3 we depend on.
+      - run: .harness/gates/check-deps.sh "$GITHUB_WORKSPACE" --fail-on=critical
+
+  build-and-test:
+    name: Build & test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: ["20", "22"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - run: npm ci
+      - run: npm run build
+      - run: npm test

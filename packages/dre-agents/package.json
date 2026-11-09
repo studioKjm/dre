@@ -29,7 +29,7 @@
     "adm-zip": "^0.6.1"
   },
   "optionalDependencies": {
-    "puppeteer-core": "^24.43.1"
+    "puppeteer-core": "^25.16.0"
   },
   "devDependencies": {
     "esbuild": "^0.28.2"
