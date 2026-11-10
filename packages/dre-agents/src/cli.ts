@@ -29,6 +29,7 @@ function setup(): void {
     { name: "cursor", detect: () => existsSync(join(homedir(), ".cursor")), register: () => registerCursor(scope) },
     { name: "gemini", detect: () => existsSync(join(homedir(), ".gemini")) || hasCli("gemini"), register: () => registerGemini() },
     { name: "codex", detect: () => existsSync(join(homedir(), ".codex")) || hasCli("codex"), register: () => registerCodex() },
+    { name: "grok", detect: () => existsSync(join(homedir(), ".grok")) || hasCli("grok"), register: () => registerGrok(scope) },
   ];
 
   const targets = requested
@@ -41,8 +42,8 @@ function setup(): void {
     console.error(
       requested
         ? `알 수 없는 --agent 값입니다. 지원: ${agents.map((a) => a.name).join(", ")}, all`
-        : "설치된 에이전트(Claude Code / Cursor / Gemini CLI / Codex)를 찾지 못했습니다. " +
-            "--agent=claude|cursor|gemini|codex|all 로 직접 지정하세요.",
+        : "설치된 에이전트(Claude Code / Cursor / Gemini CLI / Codex / Grok Build)를 찾지 못했습니다. " +
+            "--agent=claude|cursor|gemini|codex|grok|all 로 직접 지정하세요.",
     );
     process.exit(1);
   }
@@ -174,6 +175,21 @@ function registerCodex(): void {
   });
 }
 
+/**
+ * Grok Build도 config.toml의 [mcp_servers.<name>] 테이블이라 Codex와 같은
+ * upsertTomlTable()을 그대로 쓴다. 공식 문서 기준 프로젝트 범위(.grok/config.toml)가
+ * 사용자 범위를 완전히 덮어쓰므로(병합 아님) 우리도 테이블 단위 전체 교체면 충분하다.
+ */
+function registerGrok(scope: "user" | "project"): void {
+  const configPath = scope === "project" ? join(process.cwd(), ".grok", "config.toml") : join(homedir(), ".grok", "config.toml");
+  console.log(`[grok] DRE MCP 서버를 등록합니다 (${configPath})...`);
+  upsertTomlTable(configPath, "mcp_servers.dre", {
+    command: "node",
+    args: [mcpServerPath],
+    env: { DRE_REPORTS_DIR: reportsDir },
+  });
+}
+
 function runMcpServer(): void {
   execFileSync(process.execPath, [mcpServerPath, ...rest], { stdio: "inherit" });
 }
@@ -188,8 +204,8 @@ switch (cmd) {
   default:
     console.log("사용법: dre-agents <setup|mcp>");
     console.log("  setup  DRE MCP 서버를 에이전트에 등록합니다");
-    console.log("           --project           Claude Code/Cursor를 프로젝트 범위로 등록 (기본: 사용자 범위)");
-    console.log("           --agent=<목록|all>   설치 감지를 건너뛰고 claude,cursor,gemini,codex 중 지정 (쉼표 구분)");
+    console.log("           --project           Claude Code/Cursor/Grok Build를 프로젝트 범위로 등록 (기본: 사용자 범위)");
+    console.log("           --agent=<목록|all>   설치 감지를 건너뛰고 claude,cursor,gemini,codex,grok 중 지정 (쉼표 구분)");
     console.log("  mcp    MCP 서버를 직접 실행합니다 (보통 setup이 자동으로 연결하므로 직접 쓸 일은 적습니다)");
     process.exit(cmd ? 1 : 0);
 }

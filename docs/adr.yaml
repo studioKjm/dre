@@ -401,3 +401,30 @@
     테이블 뒤에 사용자가 직접 주석을 달아놨다면 "다음 `[` 전까지"로 보는 경계 판단이
     그 주석까지 같이 삼켜버릴 수 있다 — 흔한 경우는 아니라 받아들였다. Grok Build는
     여전히 미지원.
+
+- id: ADR-015
+  title: "Grok Build 지원 — Codex와 같은 TOML 형식이라 upsertTomlTable() 재사용"
+  status: adopted
+  date: 2026-11-10
+  stacks: [nodejs, typescript]
+  context: |
+    docs.x.ai/build/features/mcp-servers 공식 문서를 확인한 결과, Grok Build의 MCP 설정도
+    `[mcp_servers.<name>]` TOML 테이블(command/args/env, 또는 원격 서버면 url/headers)이고
+    경로는 사용자 범위 `~/.grok/config.toml`, 프로젝트 범위 `.grok/config.toml`(git root까지
+    올라가며 탐색, `grok mcp add --scope project`가 쓰는 파일)이다. 같은 이름의 프로젝트
+    서버는 사용자 서버를 완전히 대체한다(병합이 아니라 교체) — 즉 ADR-014의
+    upsertTomlTable()이 이미 정확히 이 동작(테이블 단위 전체 교체)을 하고 있어서 새로
+    만들 게 없었다.
+  decision: |
+    registerGrok(scope)를 추가해 scope에 따라 `~/.grok/config.toml` 또는
+    `<cwd>/.grok/config.toml`을 고르고, Codex와 동일한 upsertTomlTable()을 호출한다.
+    agents 목록에 추가, --agent 목록/에러 메시지/사용법 출력에 grok을 반영. Grok Build는
+    공식적으로 프로젝트 범위를 지원하므로 --project 플래그가 Claude Code/Cursor처럼
+    적용된다(Codex·Gemini는 여전히 사용자 범위만).
+  consequence: |
+    임시 HOME/프로젝트 디렉터리로 검증: (1) 사용자 범위 신규 생성. (2) 프로젝트 범위에서
+    기존 `[mcp_servers.other]`를 보존하며 dre 블록 추가. (3) --agent=all로 5개
+    (claude/cursor/gemini/codex/grok) 동시 등록. REA가 지원하는 5개 에이전트를 전부
+    커버하게 됐다. 대가: xAI 공식 문서를 기준으로 구현했지만 실제 Grok Build CLI로
+    기동 테스트는 못 했다(설치돼 있지 않음) — 필드명(command/args/env)과 테이블 경로는
+    문서에 명시된 그대로라 신뢰도가 높지만, 실사용 피드백이 들어오면 확인이 필요하다.

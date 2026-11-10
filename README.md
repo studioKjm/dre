@@ -18,12 +18,13 @@ with evidence and explicit uncertainty on every claim. The business-side counter
 npx dre-agents setup
 ```
 
-Auto-detects installed agents (Claude Code, Cursor, Gemini CLI, Codex) and registers the DRE
-MCP server with each. Open a new session and the tools below appear automatically.
+Auto-detects installed agents (Claude Code, Cursor, Gemini CLI, Codex, Grok Build) and
+registers the DRE MCP server with each. Open a new session and the tools below appear
+automatically.
 
 Options:
-- `npx dre-agents setup --agent=claude,cursor,gemini,codex` — skip detection, target specific agents (or `--agent=all`)
-- `npx dre-agents setup --project` — register Claude Code/Cursor for the current project only (default: all projects; Gemini CLI and Codex are user-scope only)
+- `npx dre-agents setup --agent=claude,cursor,gemini,codex,grok` — skip detection, target specific agents (or `--agent=all`)
+- `npx dre-agents setup --project` — register Claude Code/Cursor/Grok Build for the current project only (default: all projects; Gemini CLI and Codex are user-scope only)
 
 ## Tools
 
