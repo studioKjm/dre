@@ -8,9 +8,10 @@ business model, positioning, marketing, ads, tech stack, financials, and pricing
 with evidence and explicit uncertainty on every claim. The business-side counterpart to
 [REA](https://github.com/morluto/rea), which covers the technical side.
 
-> Status: pre-release. 11 MCP tools built and tested; AC-008 (independent accuracy benchmark)
-> is still pending real user labeling. See `docs/adr.yaml` for the design decisions behind
-> each feature and `.harness/ouroboros/` for the spec/eval history.
+> Status: pre-release. 11 MCP tools built and tested; AC-008 (independent accuracy benchmark,
+> self-labeled by an independent subagent with no access to DRE's own reports) currently scores
+> 77.0% against an 85% target — see `.harness/ouroboros/evaluations/` for the full history and
+> `docs/adr.yaml` for the design decisions behind each feature.
 
 ## Install
 
@@ -53,6 +54,11 @@ Options:
    agent may supplement with its own research, but must mark it `source: "agent"` and
    `inferred`/`estimated` — never `observed` (ADR-003).
 
+## Examples
+See [`examples/`](examples/) for two real runs: a golden-path analysis (Notion) and an honest
+collection failure (a CAPTCHA-blocked site) — showing what DRE reports when it's blocked instead
+of silently returning nothing or faking a result.
+
 ## Claim schema
 Each claim has `type` (`observed | inferred | estimated`), `confidence`, `evidence[]` (each with
 an optional `source: "dre" | "agent"`), `assumptions[]`. Revenue-model labels are a fixed taxonomy
@@ -77,6 +83,12 @@ cd packages/dre-agents && npm run build
 - `DRE_CHROME_PATH` — Chrome/Chromium path, for JS-rendered pages (`collect_pricing` with `js: true`)
 - `DRE_ALLOW_PRIVATE_NETWORK=1` — local dev/testing only; disables the SSRF guard
 
+## Contributing
+See [`CONTRIBUTING.md`](CONTRIBUTING.md) for dev setup, the harness gates CI enforces, and how
+to add a collector. Security issues: [`SECURITY.md`](SECURITY.md). Changes: [`CHANGELOG.md`](CHANGELOG.md).
+
 ## Roadmap
-- Done: pricing/terms/appstore/techstack/ad-library/financials(US+KR)/price-history/jobs collectors, analyze_company orchestrator, npm packaging prep
+- Done: pricing/terms/appstore/techstack/ad-library/financials(US+KR)/price-history/jobs
+  collectors, analyze_company orchestrator, npm packaging, multi-agent setup (Claude Code/
+  Cursor/Gemini CLI/Codex/Grok Build), CI (7 harness gates + build/test on Node 20/22)
 - Next: traffic/CPC/CTR/CVR/ROAS scenario estimates (user-supplied external API keys, stated assumptions — see non_goals in `.harness/ouroboros/seeds/seed-v1.yaml` for what DRE deliberately does not do)
