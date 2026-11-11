@@ -119,7 +119,7 @@ export function createDreServer(services: ToolServices): McpServer {
     {
       title: "Look up SEC EDGAR financial filings (US public companies only)",
       description:
-        "Look up a company's actual reported revenue and net income from its most recent annual (10-K) filing with the US SEC, via EDGAR's free XBRL data (data.sec.gov) — no scraping, no bot blocking, authoritative government filings. Only works for US-listed public companies (and some large private filers); for anything else this returns an empty 'items' with a warning, which is an expected, non-error outcome — most companies you'll analyze are private and simply have no SEC filings. Figures are in USD. If present, prefer this over inferring revenue from a pricing page." +
+        "Look up a company's actual reported revenue and net income from its most recent annual (10-K) filing with the US SEC, via EDGAR's free XBRL data (data.sec.gov) — no scraping, no bot blocking, authoritative government filings. Only works for US-listed public companies (and some large private filers); for anything else this returns an empty 'items' with a warning, which is an expected, non-error outcome — most companies you'll analyze are private and simply have no SEC filings. Figures are in USD. If present, prefer this over inferring revenue from a pricing page. Also tries to read the filing's revenue-disaggregation footnote (e.g. 'Subscription'/'Advertising'/'In-app purchases' as separate line items) when the 10-K reports one — useful evidence for which revenue-model labels actually apply, not just the total. Not every filer disaggregates revenue this way; when absent, only the two top-level facts are returned." +
         FALLBACK,
       inputSchema: edgarInput,
     },

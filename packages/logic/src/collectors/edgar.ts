@@ -11,6 +11,12 @@ export interface FinancialFact {
 export interface EdgarSource {
   findCik(nameOrTicker: string): Promise<{ cik: number; ticker: string; title: string } | null>;
   fetchCompanyFacts(cik: number): Promise<unknown>;
+  /**
+   * companyfacts(XBRL 수치)에는 세그먼트 분해(예: 매출 중 광고 매출만)가 없다 — 그건 공시
+   * 본문 주석에만 있다. 이건 최신 10-K의 "Disaggregation of Revenue" 주석을 찾아 읽는다.
+   * 선택적 — 넘기지 않으면 collect()는 companyfacts만으로 동작한다(기존 동작 그대로).
+   */
+  fetchRevenueSegments?(cik: number): Promise<{ url: string; segments: { label: string; valueUsd: number; periodEnd: string }[] } | null>;
 }
 
 // 매출 개념은 회계기준 개정(ASC 606)에 따라 쓰는 태그가 회사·시기별로 다르다.
@@ -69,17 +75,29 @@ export class EdgarCollector {
     const items = raw ? extractFacts(raw) : [];
     if (!items.length) warnings.push(`matched SEC filer "${entry.title}" (CIK ${entry.cik}) but no annual (10-K) revenue/income figures were found in XBRL data`);
 
-    return {
-      items,
-      evidence: [
-        {
-          url: `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${entry.cik}&type=10-K`,
-          snapshot: `Matched filer: ${entry.title} (ticker ${entry.ticker}, CIK ${entry.cik})`,
-          retrievedAt: new Date().toISOString(),
-          source: "dre",
-        },
-      ],
-      warnings,
-    };
+    const evidence: Collected<FinancialFact>["evidence"] = [
+      {
+        url: `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${entry.cik}&type=10-K`,
+        snapshot: `Matched filer: ${entry.title} (ticker ${entry.ticker}, CIK ${entry.cik})`,
+        retrievedAt: new Date().toISOString(),
+        source: "dre",
+      },
+    ];
+
+    const disaggregation = await this.source.fetchRevenueSegments?.(entry.cik);
+    if (disaggregation?.segments.length) {
+      const fiscalYear = Number(disaggregation.segments[0]!.periodEnd.slice(0, 4)) || 0;
+      for (const s of disaggregation.segments) {
+        items.push({ concept: s.label, valueUsd: s.valueUsd, fiscalYear, form: "10-K", periodEnd: s.periodEnd });
+      }
+      evidence.push({
+        url: disaggregation.url,
+        snapshot: disaggregation.segments.map((s) => `${s.label}: $${s.valueUsd.toLocaleString()}`).join("\n"),
+        retrievedAt: new Date().toISOString(),
+        source: "dre",
+      });
+    }
+
+    return { items, evidence, warnings };
   }
 }

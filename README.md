@@ -10,7 +10,7 @@ with evidence and explicit uncertainty on every claim. The business-side counter
 
 > Status: pre-release. 11 MCP tools built and tested; AC-008 (independent accuracy benchmark,
 > self-labeled by an independent subagent with no access to DRE's own reports) currently scores
-> 82.4% against an 85% target — see `.harness/ouroboros/evaluations/` for the full history and
+> 83.7% against an 85% target — see `.harness/ouroboros/evaluations/` for the full history and
 > `docs/adr.yaml` for the design decisions behind each feature.
 
 ## Install
@@ -37,7 +37,7 @@ Options:
 | `collect_appstore` | iOS/Play in-app purchase listings | high |
 | `collect_techstack` | frameworks, CMS, payment/analytics scripts from headers+HTML | very high (can't be blocked without breaking the page) |
 | `collect_ad_library` | Google Ads Transparency Center ad counts | high (Google only — Meta is excluded, see below) |
-| `collect_financials` | SEC EDGAR revenue/net income (US public companies) | high (free, no key) |
+| `collect_financials` | SEC EDGAR revenue/net income, plus revenue-by-segment (e.g. subscription/ads) when the 10-K discloses it | high (free, no key) |
 | `collect_financials_kr` | DART (Korean FSS) revenue/net income | high (free, needs your own API key) |
 | `collect_price_history` | pricing over time via archive.org snapshots | — (REA has no equivalent) |
 | `collect_jobs` | open postings via Greenhouse/Lever | very high |

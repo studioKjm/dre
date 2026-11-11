@@ -562,3 +562,34 @@
     "다시 돌려보면" 식으로 줄일 수 있는 게 아니라 (a) canva는 원칙 문제, (b) 차원 XBRL
     파싱은 실제 범위가 큰 새 작업, (c) 외부 소스는 DRE의 설계 범위 밖이라는 세 가지로
     명확히 분류됐다.
+
+- id: ADR-020
+  title: "SEC 10-K 매출 분해 주석 파싱 — XBRL 파서 없이 R##.htm을 htmlToText로"
+  status: adopted
+  date: 2026-11-11
+  stacks: [nodejs, typescript]
+  context: |
+    ADR-019에서 "coupang/duolingo의 'ads'는 10-K 세그먼트 주석의 차원(dimensional) XBRL
+    태깅에 있을 가능성이 높은데, 평면 개념만 읽는 EdgarCollector로는 범위 밖"이라고 적어뒀다.
+    실제로 SEC 공시의 "Disaggregation of Revenue" 같은 주석을 들여다보니, dimensional XBRL
+    태그 자체를 파싱할 필요가 없었다 — SEC의 XBRL 뷰어가 그 주석을 이미 사람이 보는 일반
+    HTML 표(R##.htm)로 렌더링해서 같은 공시 디렉터리에 공개해둔다. 우리가 이미 모든 곳에
+    쓰는 htmlToText로 바로 읽을 수 있는 포맷이었다.
+  decision: |
+    packages/data/src/edgar.ts에 세 함수를 추가: fetchLatestTenK(최신 10-K accession 찾기,
+    submissions API) -> fetchFilingReports/parseFilingSummary(그 공시의 FilingSummary.xml에서
+    "disaggregation...revenue" 이름의 보고서 찾기) -> fetchRevenueSegments/
+    parseRevenueSegments(그 R##.htm을 읽어 "세그먼트 이름 -> Disaggregation of Revenue
+    [Line Items] -> 개념 이름 -> 숫자들" 반복 패턴만 파싱). "$ in Millions/Thousands" 머리말
+    배율도 반영한다. 범용 XBRL/차원 파서가 아니라 이 한 가지 렌더링 패턴만 읽는다 — 새
+    의존성 없음. EdgarCollector.collect()가 이 결과를 기존 FinancialFact 배열에 그대로
+    추가한다(라벨 매핑은 하지 않는다 — "DRE는 수집만, 라벨링은 호출 에이전트" 원칙 그대로).
+  consequence: |
+    실제 10-K 두 개로 검증: Coupang은 Net retail sales/Third-party merchant services/Other
+    revenue로만 쪼개져 있어 'Advertising' 항목이 없다(코드 문제가 아니라 그 회사가 실제로
+    이렇게 공시하지 않는다). Duolingo는 'Advertising: \$79,725,000'가 깨끗하게 있어 리포트에
+    추가, AC-008 82.4% -> 83.7%. Spotify도 확인해봤다 — 20-F(외국 민간 발행인) + IFRS
+    taxonomy(us-gaap 아님, ifrs-full) + EUR 보고라 애초에 이 기능이 못 미치는 대상인데,
+    실제 20-F 매출인정 주석을 봐도 Premium/Ad-Supported를 별도 항목으로 태깅하지 않아
+    20-F/IFRS 지원을 추가해도 Spotify 건은 해결되지 않았을 것 — 확인 후 그 확장은
+    하지 않기로 했다(검증되지 않은 효과를 위해 범위를 넓히지 않음).

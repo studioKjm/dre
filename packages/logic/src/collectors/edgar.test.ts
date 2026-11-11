@@ -79,3 +79,32 @@ test("matched filer but no annual figures yields a warning, not a crash", async 
   assert.deepEqual(r.items, []);
   assert.match(r.warnings[0]!, /no annual \(10-K\)/);
 });
+
+test("appends revenue-disaggregation segments as additional facts, with their own evidence entry", async () => {
+  const source: EdgarSource = {
+    ...fakeSource({ cik: 1234, ticker: "EX", title: "Example Inc." }, companyFacts()),
+    fetchRevenueSegments: async () => ({
+      url: "https://www.sec.gov/Archives/edgar/data/1234/0001/R46.htm",
+      segments: [
+        { label: "Advertising", valueUsd: 79_725_000, periodEnd: "2025-12-31" },
+        { label: "Subscription", valueUsd: 873_442_000, periodEnd: "2025-12-31" },
+      ],
+    }),
+  };
+  const r = await new EdgarCollector(source).collect("Example");
+  const ads = r.items.find((f) => f.concept === "Advertising");
+  assert.deepEqual(ads, { concept: "Advertising", valueUsd: 79_725_000, fiscalYear: 2025, form: "10-K", periodEnd: "2025-12-31" });
+  assert.equal(r.evidence.length, 2);
+  assert.match(r.evidence[1]!.url, /R46\.htm/);
+  assert.match(r.evidence[1]!.snapshot!, /Advertising: \$79,725,000/);
+});
+
+test("fetchRevenueSegments returning null (no disaggregation note found) doesn't add anything or warn", async () => {
+  const source: EdgarSource = {
+    ...fakeSource({ cik: 1234, ticker: "EX", title: "Example Inc." }, companyFacts()),
+    fetchRevenueSegments: async () => null,
+  };
+  const r = await new EdgarCollector(source).collect("Example");
+  assert.equal(r.evidence.length, 1);
+  assert.deepEqual(r.items.map((f) => f.concept).sort(), ["NetIncomeLoss", "Revenues"]);
+});

@@ -1,0 +1,35 @@
+date: "2026-11-11T08:20:00"
+seed_ref: "seed-v1.yaml"
+ac_ref: "AC-008"
+status: "provisional, supersedes ac-008-provisional-2026-11-11b"
+mean_match: 0.837
+pass_threshold: 0.85
+fixes_applied_this_round:
+  - "New capability, not a bugfix: EdgarCollector now also reads a 10-K's revenue-disaggregation
+    footnote (e.g. 'Subscription'/'Advertising'/'In-app purchases' as separate dollar line items),
+    not just the company-wide total. companyfacts' flat XBRL facts never had this — it's only in
+    the filing's notes, rendered by SEC's own XBRL viewer as plain HTML (R##.htm pages), which
+    packages/data/src/edgar.ts now fetches (via FilingSummary.xml) and parses with
+    parseRevenueSegments() — no new dependency, no XBRL/XML parser, just the same htmlToText
+    already used everywhere else."
+  - "Verified live against two real filings: Coupang's 10-K disaggregates into Net retail
+    sales/Third-party merchant services/Other revenue (no 'Advertising' line — doesn't help
+    Coupang's AC-008 mismatch). Duolingo's 10-K DOES have a clean 'Advertising: $79,725,000' line
+    item — added to its report as an [ads] claim with real SEC evidence. Duolingo's score:
+    25% -> 50% (still missing freemium/one-time, unrelated to this feature)."
+  - "mean: 82.4% -> 83.7%, entirely from Duolingo's new ads evidence."
+investigated_and_declined:
+  - "Spotify's 'ads' miss (gold wants [subscription, ads], report only has [subscription]):
+    Spotify files 20-F (foreign private issuer) under IFRS, not 10-K/us-gaap — EdgarCollector
+    doesn't recognize 20-F or the ifrs-full namespace at all. Checked whether fixing that would
+    even help: Spotify's actual 20-F revenue-recognition note (R60.htm) doesn't disaggregate
+    Premium vs Ad-Supported revenue as separate XBRL-tagged line items (reports in EUR, and the
+    relevant note is about deferred revenue, not a product/segment breakdown). So even full
+    20-F/IFRS support wouldn't fix this specific case — declined to build it for an unverified
+    payoff. The general 20-F/IFRS gap is real (would matter for other foreign issuers) but out of
+    scope here since it wasn't going to move AC-008."
+  - "Coupang's 'ads' miss: confirmed its actual 10-K disaggregation table has no advertising line
+    (see above) — this isn't a parsing gap, the company genuinely doesn't break it out this way
+    in its financial statements. Likely only in earnings-call commentary, not a filing."
+remaining_known_gaps: "unchanged from ac-008-provisional-2026-11-11b — canva (principle), ridibooks/class101 (external sources, JS rendering), figma usage-based (inconclusive), duolingo freemium/one-time, coupang ads/extra labels."
+next_step: "82.4% -> 83.7%, 1.3pt from this feature. 85% is now ~1.3pt away. Real user feedback remains the honest next lever; the remaining per-site gaps are each individually diagnosed rather than mysterious at this point."

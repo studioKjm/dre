@@ -12,6 +12,8 @@ import {
   findCik,
   findCorpCode,
   fetchCompanyFacts,
+  fetchLatestTenK,
+  fetchRevenueSegments,
   loadGold,
   parseAppStore,
   parsePlay,
@@ -97,6 +99,10 @@ export function createServices(opts: ServiceOptions = {}) {
   const edgar = new EdgarCollector({
     findCik: (n) => findCik(n, { userAgent: secUserAgent }),
     fetchCompanyFacts: (cik) => fetchCompanyFacts(cik, { userAgent: secUserAgent }),
+    fetchRevenueSegments: async (cik) => {
+      const filing = await fetchLatestTenK(cik, { userAgent: secUserAgent });
+      return filing ? fetchRevenueSegments(cik, filing, { userAgent: secUserAgent }) : null;
+    },
   });
   const requireDartKey = (): string => {
     if (!dartApiKey) throw new ApiKeyMissing("DART");
