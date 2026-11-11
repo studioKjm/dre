@@ -428,3 +428,41 @@
     커버하게 됐다. 대가: xAI 공식 문서를 기준으로 구현했지만 실제 Grok Build CLI로
     기동 테스트는 못 했다(설치돼 있지 않음) — 필드명(command/args/env)과 테이블 경로는
     문서에 명시된 그대로라 신뢰도가 높지만, 실사용 피드백이 들어오면 확인이 필요하다.
+
+- id: ADR-016
+  title: "dre-agents CLI에 자동 테스트 추가 — 매번 수동 스모크 테스트하던 걸 대체"
+  status: adopted
+  date: 2026-11-11
+  stacks: [nodejs, typescript]
+  context: |
+    ADR-013/014/015 세 번의 agent 등록 로직 추가 모두 임시 HOME으로 손으로 스모크
+    테스트를 했을 뿐, 테스트 스위트(147개)에는 cli.ts가 전혀 들어있지 않았다. 다른
+    5개 패키지는 전부 테스트가 있는데 실제로 npm publish되는 패키지만 비어 있었다 —
+    REA 비교 체크리스트에서 나온 격차 항목. 문제는 cli.ts가 모듈 최상단에서
+    `process.argv`를 즉시 읽어 switch로 분기하고 실패 시 `process.exit()`를 불러서,
+    import만 해도 부작용이 터진다는 점과, dre-agents가 tsc -b 프로젝트 레퍼런스에
+    없어서(ADR-011 — esbuild로 직접 번들) 루트 `npm test`의 `find packages -path
+    '*/dist/*' -name '*.test.js'` 글롭이 애초에 이 패키지를 보지 못한다는 점이었다.
+  decision: |
+    1) cli.ts의 최상위 switch를 main()으로 감싸고 `import.meta.url ===
+    pathToFileURL(process.argv[1]).href`로 "직접 실행될 때만" 돌게 가드했다 — 테스트가
+    모듈을 import해도 CLI가 실행되지 않는다. 2) setup()이 전역 `rest`를 읽던 걸
+    `setup(args: string[])`로 바꿔 인자를 명시적으로 받게 했다. 3) 순수 로직
+    (tomlValue, upsertTomlTable, writeJsonMcpConfig, selectAgents)을 export해서 직접
+    단위 테스트할 수 있게 했다. selectAgents()는 "--agent 파싱 결과로 대상 agent
+    목록을 좁히는" 필터링 로직을 agent 정의에서 떼어내 만든 새 함수다. 4) tsc
+    프로젝트 레퍼런스에 묶지 않고, 이미 devDependency인 esbuild로 src/cli.ts와
+    cli.test.ts를 번들 없이(no --bundle) dist-test/로 transpile한 뒤 `node --test`로
+    돌리는 pretest/test 스크립트를 패키지에 추가했다(새 의존성 없음). 루트 CI에는
+    `npm test -w dre-agents` 스텝을 별도로 추가했다 — 루트 `npm test`의 글롭과는
+    분리된 경로다.
+  consequence: |
+    12개 테스트: tomlValue 렌더링 3종, upsertTomlTable의 신규 생성·기존 테이블 보존·
+    idempotent 재실행·백업 4종, writeJsonMcpConfig의 신규 생성·키 보존·깨진 JSON
+    격리 3종, selectAgents의 자동감지·all·명시목록·unknown-name 필터링 2종(4개 중
+    일부는 사실상 같은 분기). 모두 임시 디렉터리에서 돌아 실제 홈 디렉터리를
+    건드리지 않는다. 리팩터링 후 실제 CLI(`node dist/cli.js setup --agent=all`)가
+    여전히 정상 동작하는지 재확인했다. 대가: execFileSync로 실제 바이너리(claude,
+    gemini, codex, grok)를 호출하는 registerClaudeCode 등 5개 register 함수 자체는
+    여전히 단위 테스트가 없다 — child_process 모킹 없이는 손으로 하는 스모크 테스트에
+    의존한다.

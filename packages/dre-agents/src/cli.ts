@@ -3,7 +3,7 @@ import { execFileSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, writeFileSync, copyFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const [cmd, ...rest] = process.argv.slice(2);
 const mcpServerPath = fileURLToPath(new URL("./mcp-server.js", import.meta.url));
@@ -18,10 +18,20 @@ function hasCli(bin: string): boolean {
   }
 }
 
+/** --agent=<목록|all> 파싱 결과(requested)로 감지 대상 agent 목록을 좁힌다. */
+export function selectAgents<T extends { name: string; detect: () => boolean }>(
+  agents: T[],
+  requested: string[] | null,
+): T[] {
+  if (!requested) return agents.filter((a) => a.detect());
+  if (requested.includes("all")) return agents;
+  return agents.filter((a) => requested.includes(a.name));
+}
+
 /** REA의 `npx rea-agents setup`과 같은 자리 — DRE MCP 서버를 agent별 설정에 등록한다. */
-function setup(): void {
-  const scope = rest.includes("--project") ? "project" : "user";
-  const agentArg = rest.find((a) => a.startsWith("--agent="))?.split("=")[1];
+function setup(args: string[]): void {
+  const scope = args.includes("--project") ? "project" : "user";
+  const agentArg = args.find((a) => a.startsWith("--agent="))?.split("=")[1];
   const requested = agentArg ? agentArg.split(",") : null;
 
   const agents: { name: string; detect: () => boolean; register: () => void }[] = [
@@ -32,11 +42,7 @@ function setup(): void {
     { name: "grok", detect: () => existsSync(join(homedir(), ".grok")) || hasCli("grok"), register: () => registerGrok(scope) },
   ];
 
-  const targets = requested
-    ? requested.includes("all")
-      ? agents
-      : agents.filter((a) => requested.includes(a.name))
-    : agents.filter((a) => a.detect());
+  const targets = selectAgents(agents, requested);
 
   if (targets.length === 0) {
     console.error(
@@ -81,7 +87,7 @@ function registerClaudeCode(scope: "user" | "project"): void {
 }
 
 /** Cursor/Gemini CLI 공통 설정 형식: { mcpServers: { <name>: { command, args, env } } } */
-function writeJsonMcpConfig(configPath: string, serverName: string, serverConfig: Record<string, unknown>): void {
+export function writeJsonMcpConfig(configPath: string, serverName: string, serverConfig: Record<string, unknown>): void {
   mkdirSync(dirname(configPath), { recursive: true });
 
   let config: Record<string, unknown> = {};
@@ -129,7 +135,7 @@ function registerGemini(): void {
  * `[mcp_servers.dre]` 테이블 하나만 찾아서 교체하거나 끝에 덧붙인다 — 다음 `[`로
  * 시작하는 줄 전까지를 "우리 테이블"로 보고, 그 밖의 내용은 손대지 않는다.
  */
-function tomlValue(val: unknown): string {
+export function tomlValue(val: unknown): string {
   if (typeof val === "string") return JSON.stringify(val);
   if (Array.isArray(val)) return `[${val.map(tomlValue).join(", ")}]`;
   if (val && typeof val === "object") {
@@ -139,7 +145,7 @@ function tomlValue(val: unknown): string {
   return String(val);
 }
 
-function upsertTomlTable(configPath: string, tableName: string, fields: Record<string, unknown>): void {
+export function upsertTomlTable(configPath: string, tableName: string, fields: Record<string, unknown>): void {
   mkdirSync(dirname(configPath), { recursive: true });
 
   let lines: string[] = [];
@@ -190,22 +196,30 @@ function registerGrok(scope: "user" | "project"): void {
   });
 }
 
-function runMcpServer(): void {
-  execFileSync(process.execPath, [mcpServerPath, ...rest], { stdio: "inherit" });
+function runMcpServer(args: string[]): void {
+  execFileSync(process.execPath, [mcpServerPath, ...args], { stdio: "inherit" });
 }
 
-switch (cmd) {
-  case "setup":
-    setup();
-    break;
-  case "mcp":
-    runMcpServer();
-    break;
-  default:
-    console.log("사용법: dre-agents <setup|mcp>");
-    console.log("  setup  DRE MCP 서버를 에이전트에 등록합니다");
-    console.log("           --project           Claude Code/Cursor/Grok Build를 프로젝트 범위로 등록 (기본: 사용자 범위)");
-    console.log("           --agent=<목록|all>   설치 감지를 건너뛰고 claude,cursor,gemini,codex,grok 중 지정 (쉼표 구분)");
-    console.log("  mcp    MCP 서버를 직접 실행합니다 (보통 setup이 자동으로 연결하므로 직접 쓸 일은 적습니다)");
-    process.exit(cmd ? 1 : 0);
+function main(): void {
+  switch (cmd) {
+    case "setup":
+      setup(rest);
+      break;
+    case "mcp":
+      runMcpServer(rest);
+      break;
+    default:
+      console.log("사용법: dre-agents <setup|mcp>");
+      console.log("  setup  DRE MCP 서버를 에이전트에 등록합니다");
+      console.log("           --project           Claude Code/Cursor/Grok Build를 프로젝트 범위로 등록 (기본: 사용자 범위)");
+      console.log("           --agent=<목록|all>   설치 감지를 건너뛰고 claude,cursor,gemini,codex,grok 중 지정 (쉼표 구분)");
+      console.log("  mcp    MCP 서버를 직접 실행합니다 (보통 setup이 자동으로 연결하므로 직접 쓸 일은 적습니다)");
+      process.exit(cmd ? 1 : 0);
+  }
+}
+
+// 테스트에서 이 모듈을 import할 때 CLI가 실행되지 않도록, 엔트리포인트로 직접 실행될
+// 때만(node dist/cli.js ...) main()을 돌린다.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main();
 }

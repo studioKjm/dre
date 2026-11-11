@@ -55,3 +55,6 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm test
+      # dre-agents isn't in the tsc -b project references (it's esbuild-bundled
+      # separately, see ADR-011), so it's outside the `npm test` glob above.
+      - run: npm test -w dre-agents

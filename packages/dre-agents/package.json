@@ -35,6 +35,8 @@
     "esbuild": "^0.28.2"
   },
   "scripts": {
-    "build": "node scripts/build.mjs"
+    "build": "node scripts/build.mjs",
+    "pretest": "esbuild src/cli.ts src/cli.test.ts --outdir=dist-test --format=esm --platform=node --target=node20",
+    "test": "node --test dist-test/cli.test.js"
   }
 }
