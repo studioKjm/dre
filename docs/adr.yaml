@@ -523,3 +523,42 @@
     직접 하지 않고 안내만 남겼다(레포 소유자가 아니면 못 바꾸는 설정이기도 하다). npm
     실제 publish는 여전히 수동(보안키 2FA, ADR-011) — release-please는 버전/CHANGELOG/태그만
     자동화하고 publish는 대신하지 않는다.
+
+- id: ADR-019
+  title: "AC-008 85% 재도전 — 라벨링 재시도 대신 실제 수집기 버그 3개 사냥"
+  status: adopted
+  date: 2026-11-11
+  stacks: [nodejs, typescript]
+  context: |
+    ADR-017에서 "같은 모델 계열의 또 다른 서브에이전트를 더 돌려도 새 신호를 주기 어렵다"고
+    결론 내렸었다. 사용자가 85% 재도전을 요청해서, 이번엔 라벨링을 다시 하는 대신 접근을
+    바꿨다 — medium.com/stripe.com의 불일치가 "DRE가 증거를 놓쳤나, 독립 라벨러가 과대추론
+    했나"였는데, 실제로 DRE의 실제 수집기(services.pricing.collect)를 지금 라이브 사이트에
+    돌려서 직접 확인했다.
+  decision: |
+    세 가지 진짜 버그를 찾아 고쳤다. (1) bot-challenge.ts에 Cloudflare 현행 인터스티셜
+    제목 "Just a moment..."가 패턴 목록에 없었다 — medium.com이 403으로 막혀 있는 걸
+    "JS-rendered라 가격이 없다"로 잘못 보고하고 있었다(실측 확인). (2) pricing.ts의
+    evidence snapshot이 `text.slice(0, 20000)`로 머리부터 자르는데, stripe.com/pricing은
+    전체 텍스트가 ~40,000자라 실제 요금 섹션(Stripe Sigma/Billing, $620/월, "Subscription
+    and cancellation terms apply")이 char 23,869 부근에 있어 통째로 잘렸다(실측 확인).
+    extractPlanCandidates가 찾은 매칭 구간을 중심으로 창을 잡는 snapshotWindow()로 교체.
+    (3) dropbox.com/plans는 "Basic"과 "Free"가 공백 없이 붙어 "BasicFree"가 되는 카드가
+    있어(inline 요소라 htmlToText가 줄바꿈을 안 넣음) 기존 FREE 정규식(정확히 "free"만
+    매칭)이 못 잡았다 — FREE_SUFFIX로 "소문자+free로 끝나는 짧은 줄"도 잡게 확장.
+    세 사이트의 리포트를 고쳐진 수집기로 다시 수집한 증거로 재작성했고, medium.com은
+    실제로 지금도 차단돼 있는 걸 재확인해서 ADR-003 fallback(inferred, source:agent)으로
+    freemium을 보충했다.
+  consequence: |
+    71.5% -> 77.0%(ADR-017) -> 78.3%(stripe) -> 80.7%(medium) -> 82.4%(dropbox). 전부
+    재라벨링이 아니라 각각 live 사이트에서 직접 재현·확인한 근거로 설명 가능하다.
+    남은 격차를 더 파봤다: coupang/duolingo의 'ads'는 SEC XBRL에 AdvertisingExpense만
+    있고(광고 "비용", 수익 아님) AdvertisingRevenue는 없다 — 실제 증거는 10-K 세그먼트
+    주석의 차원(dimensional) XBRL 태깅에 있을 가능성이 높은데, EdgarCollector는 평면
+    개념만 읽어 이번 범위 밖. ridibooks/class101은 gold evidence 자체가 DRE 설계상
+    닿지 않는 외부 소스(뉴스 기사, 제3자 헬프센터)다. class101.net 자체 페이지는 JS
+    렌더링이라 정적 수집으로 가격 텍스트 자체가 0개(실측 확인). canva는 여전히 의도적
+    한계(ADR-004/005)로 25%, 평균을 가장 크게 끌어내린다. 85%까지 남은 ~2.6pp는 이제
+    "다시 돌려보면" 식으로 줄일 수 있는 게 아니라 (a) canva는 원칙 문제, (b) 차원 XBRL
+    파싱은 실제 범위가 큰 새 작업, (c) 외부 소스는 DRE의 설계 범위 밖이라는 세 가지로
+    명확히 분류됐다.

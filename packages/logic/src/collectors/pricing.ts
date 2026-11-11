@@ -33,6 +33,10 @@ function isBotBlockLike(e: unknown): boolean {
 const PRICE =
   /(?:[$€£¥₩]\s?\d[\d,]*(?:\.\d+)?|\d[\d,]*(?:\.\d+)?\s?(?:천|만|억)?\s?(?:원|USD|KRW|EUR))(?:\s*\/\s*(?:month|mo|year|yr|월|년))?/i;
 const FREE = /^(?:free|무료)$/i;
+// 플랜 이름과 "Free"가 공백 없이 붙어 "BasicFree"처럼 되는 경우 — htmlToText가 블록
+// 태그에만 줄바꿈을 넣다 보니, 카드 레이아웃을 inline 요소로 짠 페이지(dropbox.com/plans
+// 실측)에서 이름과 가격 사이 줄바꿈이 사라진다. 짧은 줄(플랜 카드 한 줄 분량)에서만 본다.
+const FREE_SUFFIX = /^.{1,30}?[a-z](free)$/i;
 
 /** evidence.snapshot 상한. 실제 가격 페이지 텍스트는 대부분 이보다 훨씬 작다. */
 const MAX_SNAPSHOT_CHARS = 20_000;
@@ -42,7 +46,7 @@ export function extractPlanCandidates(text: string): PlanCandidate[] {
   const out: PlanCandidate[] = [];
   const seen = new Set<string>();
   lines.forEach((line, i) => {
-    const price = PRICE.exec(line)?.[0] ?? (FREE.test(line) ? line : undefined);
+    const price = PRICE.exec(line)?.[0] ?? (FREE.test(line) ? line : FREE_SUFFIX.test(line) ? "Free" : undefined);
     if (!price) return;
     const prev = lines.slice(Math.max(0, i - 2), i).reverse().find((l) => l.length <= 40 && !PRICE.test(l));
     const name = line === price ? (prev ?? "") : line.replace(price, "").replace(/[:\-–|]+$/, "").trim() || (prev ?? "");
@@ -52,6 +56,34 @@ export function extractPlanCandidates(text: string): PlanCandidate[] {
     out.push({ name, priceText: price, line });
   });
   return out;
+}
+
+/**
+ * MAX_SNAPSHOT_CHARS를 넘는 페이지는 앞부분만 자르던 게 버그였다 — stripe.com/pricing
+ * 실측 결과, 전체 텍스트(~40,000자)에는 "Stripe Sigma"/"Billing" 같은 구독 상품의 가격·
+ * 설명이 있는데, 그 구간이 char 23,869 부근이라 20,000자 컷오프 밖이었다. 긴 마케팅
+ * 페이지는 가격표 앞에 수천 자의 소개/네비게이션 텍스트가 오는 게 보통이라, 머리부터
+ * 자르면 실제 가격 증거가 통째로 빠질 수 있다. 대신 매칭된 가격 후보들이 걸쳐 있는
+ * 구간의 중앙을 기준으로 창을 잡는다.
+ */
+function snapshotWindow(text: string, items: PlanCandidate[], maxChars: number): string {
+  if (text.length <= maxChars || items.length === 0) return text.slice(0, maxChars);
+  const lines = text.split("\n");
+  const matchedLines = new Set(items.map((it) => it.line));
+  let first = -1;
+  let last = -1;
+  lines.forEach((l, i) => {
+    if (!matchedLines.has(l)) return;
+    if (first === -1) first = i;
+    last = i;
+  });
+  if (first === -1) return text.slice(0, maxChars);
+  const before = lines.slice(0, first).join("\n").length;
+  const after = lines.slice(0, last + 1).join("\n").length;
+  const center = Math.floor((before + after) / 2);
+  const half = Math.floor(maxChars / 2);
+  const start = Math.max(0, Math.min(center - half, text.length - maxChars));
+  return text.slice(start, start + maxChars);
 }
 
 export class PricingCollector {
@@ -160,7 +192,7 @@ export class PricingCollector {
     // extractPlanCandidates의 정규식은 틀릴 수 있다(통화 단위 누락, CSS 조각 혼입 등) —
     // 호출하는 에이전트가 이 전체 텍스트를 직접 읽고 판단하는 쪽이 더 신뢰할 수 있다.
     // items는 그 판단을 빠르게 시작할 실마리로만 쓴다.
-    const snapshot = text.slice(0, MAX_SNAPSHOT_CHARS);
+    const snapshot = snapshotWindow(text, items, MAX_SNAPSHOT_CHARS);
     return {
       items,
       evidence: [{ url: page.finalUrl, snapshot: snapshot || undefined, retrievedAt: page.retrievedAt, source: "dre" }],

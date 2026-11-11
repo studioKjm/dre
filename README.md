@@ -10,7 +10,7 @@ with evidence and explicit uncertainty on every claim. The business-side counter
 
 > Status: pre-release. 11 MCP tools built and tested; AC-008 (independent accuracy benchmark,
 > self-labeled by an independent subagent with no access to DRE's own reports) currently scores
-> 77.0% against an 85% target — see `.harness/ouroboros/evaluations/` for the full history and
+> 82.4% against an 85% target — see `.harness/ouroboros/evaluations/` for the full history and
 > `docs/adr.yaml` for the design decisions behind each feature.
 
 ## Install

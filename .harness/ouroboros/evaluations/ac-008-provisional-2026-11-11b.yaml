@@ -1,0 +1,57 @@
+date: "2026-11-11T06:00:00"
+seed_ref: "seed-v1.yaml"
+ac_ref: "AC-008"
+status: "provisional — still not a valid AC-008 measurement (same methodology concern as ever: I both ship DRE and regenerate its reports), supersedes ac-008-provisional-2026-11-11"
+mean_match: 0.824
+pass_threshold: 0.85
+fixes_applied_this_round:
+  - "bot-challenge.ts: added /just a moment/i — Cloudflare's current interstitial title wasn't in BOT_CHALLENGE_PATTERNS, so a Cloudflare-protected page (medium.com) was silently
+    reported as 'no price-like text found (page may be JS-rendered)' instead of the accurate
+    'bot-challenge screen'. Confirmed live against medium.com/plans and help.medium.com (both 403
+    with a 'Just a moment...' body)."
+  - "pricing.ts: evidence snapshot used text.slice(0, 20000) unconditionally — on long
+    marketing-heavy pages (stripe.com/pricing is ~40,000 chars of extracted text), the actual
+    fee-schedule section can sit past char 20,000 and never make it into the evidence the
+    calling agent sees. Verified live: stripe.com's 'Stripe Sigma'/'Billing' monthly-subscription
+    pricing ($620/mo, explicitly labeled 'Subscription and cancellation terms apply') sat at
+    char ~23,869, just past the old cutoff. Replaced the flat head-slice with snapshotWindow(),
+    which centers the snapshot on the span where extractPlanCandidates actually found matches."
+  - "pricing.ts: FREE regex only matched a line that was exactly 'free'/'무료'. On dropbox.com/plans,
+    the Basic plan's name and price run together with no separator ('BasicFree') because
+    htmlToText only breaks lines at block tags, and this specific card used inline elements.
+    Added FREE_SUFFIX to catch a short line ending in '<lowercase-letter>free'. Verified live:
+    dropbox.com/plans now yields {name: 'Basic', priceText: 'Free'}."
+  - "regenerated 3 reports using the fixes above, with freshly collected evidence (not invented):
+    stripe.com (added [subscription] from the Billing/$620-per-month text), dropbox.com (added
+    [freemium] from the Basic/Free text), medium.com (added [freemium] as an inferred,
+    source:agent claim — medium.com/plans and its help-center article are both genuinely
+    Cloudflare-blocked right now, confirmed live, so this is the documented ADR-003 fallback,
+    not something DRE itself could collect)."
+remaining_known_gaps:
+  - "canva: unchanged, 25% — still the intentional bot-detection-bypass limitation (ADR-004/005).
+    Single biggest drag on the mean; fixing it would mean violating a principle, so not pursued."
+  - "coupang/duolingo 'ads': gold cites their SEC 10-K filings. Checked live XBRL company-facts
+    for both (CIK 1834584, 1562088) — only AdvertisingExpense (money spent on ads) exists, not
+    an AdvertisingRevenue concept. The actual evidence is very likely in a revenue-disaggregation
+    footnote using dimensional (segment-axis) XBRL tagging, which EdgarCollector doesn't parse
+    (it only reads flat top-level us-gaap concepts). Real gap, but deep enough (dimensional XBRL)
+    that it's out of scope for this round."
+  - "ridibooks 'licensing', class101 'enterprise-sales': gold evidence for both cites sources
+    DRE would never reach by design — a bizhankook.com news article and class101's channel.io
+    help-center docs, neither on the target's own domain. class101.net's own pricing page is
+    also JS-rendered with zero static price-like text (confirmed live), a known limitation absent
+    browser rendering. Also noticed class101's gold evidence URLs (individual-purchase and
+    Plus-subscription guides) don't obviously support 'enterprise-sales' specifically — flagging
+    as a possible gold-label quality issue rather than acting on it myself, since re-judging my
+    own earlier independent-labeler's work reintroduces the grader/graded independence problem
+    this whole AC-008 line of work keeps running into."
+  - "figma 'usage-based': checked figma.com/pricing live for AI-credit/usage-based language;
+    found only incidental 'Figma AI' product mentions, no clear usage-metering text in the
+    statically extracted content. Inconclusive — left as-is rather than guessing."
+next_step: |
+  82.4%, up from 71.5% at the start of this AC-008 line of work, entirely through identified
+  and verified root causes (not relabeling or re-running the same subagent). The remaining ~2.6pp
+  to 85% is now concentrated in: (1) canva — a principle, not a bug; (2) dimensional XBRL
+  parsing — real but substantial new work; (3) sources outside DRE's designed collection scope.
+  None of these are "run the eval again and see" problems anymore. Real user feedback remains
+  the next lever for anything beyond this.

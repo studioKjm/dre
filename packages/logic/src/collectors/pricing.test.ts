@@ -17,6 +17,19 @@ test("extractPlanCandidates finds plan names and prices, ignoring scripts", () =
   assert.deepEqual(items.map((i) => [i.name, i.priceText]), [["Pro", "$12/month"], ["Team", "₩29,000 / 월"]]);
 });
 
+test("extractPlanCandidates catches a plan name run into \"Free\" with no separator (real dropbox.com/plans bug)", () => {
+  // htmlToText only breaks lines at block tags; a card built from inline elements collapses
+  // "Basic" + "Free" onto one line with no whitespace, which the old free-text-only regex missed.
+  const items = extractPlanCandidates("BasicFree\n2 GB to store and share your files");
+  assert.deepEqual(items.map((i) => [i.name, i.priceText]), [["Basic", "Free"]]);
+});
+
+test("extractPlanCandidates does not treat ordinary prose mentioning \"free\" as a plan", () => {
+  // trailing punctuation means the line doesn't end in exactly "free", so the anchored
+  // FREE_SUFFIX pattern (meant only for short, no-separator plan-name+price lines) skips it.
+  assert.deepEqual(extractPlanCandidates("Shipping is completely free."), []);
+});
+
 test("collect returns candidates with evidence from the fetched page", async () => {
   const url = "https://a.com/pricing";
   const r = await new PricingCollector(new FakeFetcher({ [url]: PAGE }), allowAll()).collect(url);
@@ -205,4 +218,16 @@ test("falls back to a cross-origin pricing link when no same-origin one exists (
   const r = await new PricingCollector(fetcher, allowAll()).collect(home);
   assert.deepEqual(r.items.map((i) => i.priceText), ["$5/month"]);
   assert.equal(r.evidence[0]!.url, "https://other.a.com/pricing");
+});
+
+test("snapshot windows around matched prices on a long page instead of always cutting the head (real stripe.com/pricing bug)", async () => {
+  const url = "https://a.com/pricing";
+  // 25,000+ chars of unrelated marketing copy before any price — a flat head-slice would
+  // never reach the actual plan text, exactly what happened with stripe.com/pricing's
+  // subscription pricing section (it sat past char 20,000 in the full extracted text).
+  const filler = Array.from({ length: 2000 }, (_, i) => `<p>Marketing copy paragraph number ${i}.</p>`).join("\n");
+  const page = `<html><body>${filler}<div><h3>Pro</h3><p>$29/month</p></div></body></html>`;
+  const r = await new PricingCollector(new FakeFetcher({ [url]: page }), allowAll()).collect(url);
+  assert.deepEqual(r.items.map((i) => i.priceText), ["$29/month"]);
+  assert.match(r.evidence[0]!.snapshot!, /\$29\/month/);
 });

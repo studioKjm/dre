@@ -12,7 +12,8 @@ const BOT_CHALLENGE_PATTERNS = [
   /you are (?:a )?human/i,
   /unusual traffic/i,
   /i'?m not a robot/i,
-  /checking (?:your browser|if the site connection is secure)/i, // Cloudflare
+  /checking (?:your browser|if the site connection is secure)/i, // Cloudflare (older phrasing)
+  /just a moment/i, // Cloudflare's current interstitial title, shown before its JS challenge resolves
 ];
 
 export function detectBotChallenge(text: string): string | undefined {

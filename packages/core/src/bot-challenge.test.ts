@@ -7,6 +7,7 @@ test("detects common CAPTCHA/bot-challenge phrasing", () => {
   assert.ok(detectBotChallenge("Please verify you are a human to continue."));
   assert.ok(detectBotChallenge("We have detected unusual traffic from your network."));
   assert.ok(detectBotChallenge("Checking your browser before accessing the site."));
+  assert.ok(detectBotChallenge("Just a moment...\nmedium.com needs to review the security of your connection."));
 });
 
 test("does not flag ordinary pricing/terms text", () => {
