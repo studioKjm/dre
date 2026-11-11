@@ -1,0 +1,31 @@
+date: "2026-11-11T00:00:00"
+seed_ref: "seed-v1.yaml"
+ac_ref: "AC-008"
+status: "provisional — still not a valid AC-008 measurement (same reports/gold as 2026-10-25b, re-scored only), supersedes ac-008-provisional-2026-10-25b"
+mean_match: 0.770
+pass_threshold: 0.85
+fixes_applied_this_round:
+  - "eval-service.ts: AC-008 집계에서 in-app-purchase(보조 '결제 채널' 레이블, core/labels.ts에 이미 그렇게
+    문서화돼 있었음)를 빼고 핵심 수익모델 레이블만으로 Jaccard를 계산하도록 수정. missing/extra 표시는
+    그대로 둬서 정보는 잃지 않음. 2026-10-25b 레코드의 remaining_known_gaps에 이미 적혀 있던
+    '다음 평가에서는 핵심 레이블만 비교하는 옵션을 추가하는 것을 고려' 항목을 실제로 구현한 것 —
+    같은 reports/gold로 재측정만 했는데 71.5% -> 77.0%로 올랐다(순수 채점 버그였다는 뜻)."
+remaining_known_gaps:
+  - "medium.com: gold(독립 연구, DRE 리포트 미열람)는 freemium을 포함하는데 리포트는 subscription만 냄.
+    Medium의 무료 열람 정책은 pricing 페이지가 아니라 help 센터 문서에 있어, DRE가 그 URL을
+    evidence로 수집하지 않았다면 에이전트가 evidence-strict 원칙(ADR-003)에 따라 정직하게
+    freemium을 빼는 게 맞는 행동일 수 있다 — recall을 깎지만 버그라고 확신할 수 없다."
+  - "stripe.com: gold는 subscription을 포함하는데 리포트는 transaction-fee/usage-based/enterprise-sales만
+    냄. Stripe의 핵심 모델은 거래 수수료이고, 고정 구독료 상품이 실제로 있는지는 pricing 페이지
+    문구에 달려 있다 — 독립 레이블러가 '스타트업 생태계 상식'으로 과대추론했을 가능성과 DRE가
+    evidence를 놓쳤을 가능성이 둘 다 있고, 이번 세션에서 둘을 구분할 방법이 없다(아래 참고)."
+  - "canva: 여전히 미확인(freemium/marketplace-fee/enterprise-sales) — Canva의 자동화 브라우저
+    탐지를 우회하지 않기로 한 의도적 설계 결정의 직접 결과. 코드로 더 고칠 여지 없음."
+  - "coupang/duolingo/spotify 방향 불일치(ads 등): 2026-10-25b와 동일한 조사 깊이 차이로 보인다."
+next_step: |
+  score-level fix는 적용했지만, 남은 gap을 더 줄이려면 금번 세션 내부의 '독립 서브에이전트'로는
+  더 이상 grader/graded 독립성을 늘릴 수 없다 — 이미 2026-10-24~25 라운드에서 이 방법을 썼고,
+  지금 남은 불일치들은 "DRE가 무엇을 evidence로 잡았는가"와 "일반 상식으로 무엇을 안다고
+  가정하는가"가 갈리는 지점이라, 같은 모델 계열의 또 다른 서브에이전트를 또 돌려도 같은 종류의
+  판단 차이가 반복될 뿐 새 신호를 주지 않을 가능성이 높다. 진짜 다음 단계는 여전히 2026-10-25b와
+  같다: 실제 제3자(사용자든 외부 사용자든)의 실사용 피드백.

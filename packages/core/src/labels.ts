@@ -43,3 +43,9 @@ export const REVENUE_MODEL_LABEL_DEFINITIONS: Record<RevenueModelLabel, string> 
 export function isRevenueModelLabel(v: string): v is RevenueModelLabel {
   return (REVENUE_MODEL_LABELS as readonly string[]).includes(v);
 }
+
+/**
+ * "결제 채널" 보조 레이블 — 위 정의대로 핵심 수익모델이 아니므로 AC-008 집계(eval-service의
+ * evaluate())에서는 제외한다. 비교 화면(missing/extra)에는 그대로 보여 정보는 잃지 않는다.
+ */
+export const SECONDARY_LABELS: readonly RevenueModelLabel[] = ["in-app-purchase"];

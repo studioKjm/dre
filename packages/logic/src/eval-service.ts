@@ -1,4 +1,6 @@
-import type { GoldLabel } from "@dre/core";
+import { SECONDARY_LABELS, type GoldLabel } from "@dre/core";
+
+const coreLabels = (labels: string[]): string[] => labels.filter((l) => !(SECONDARY_LABELS as readonly string[]).includes(l));
 
 export interface LabeledReport {
   targetUrl: string;
@@ -49,7 +51,8 @@ export function evaluate(reports: LabeledReport[], gold: GoldLabel[]): EvalResul
     }
     perTarget.push({
       targetUrl: g.targetUrl,
-      score: jaccard(r.labels, g.labels),
+      // in-app-purchase 등 보조 레이블은 집계에서 뺀다 — core/labels.ts SECONDARY_LABELS 참고.
+      score: jaccard(coreLabels(r.labels), coreLabels(g.labels)),
       missing: g.labels.filter((l) => !r.labels.includes(l)),
       extra: r.labels.filter((l) => !g.labels.includes(l)),
     });

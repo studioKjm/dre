@@ -466,3 +466,29 @@
     gemini, codex, grok)를 호출하는 registerClaudeCode 등 5개 register 함수 자체는
     여전히 단위 테스트가 없다 — child_process 모킹 없이는 손으로 하는 스모크 테스트에
     의존한다.
+
+- id: ADR-017
+  title: "AC-008 집계에서 in-app-purchase(보조 레이블) 제외 — 71.5% -> 77.0%"
+  status: adopted
+  date: 2026-11-11
+  stacks: [nodejs, typescript]
+  context: |
+    2026-10-25b 평가 레코드의 remaining_known_gaps에 "핵심 레이블만 비교하는 옵션을
+    추가하는 것을 고려"라고 적어뒀는데 실제로 구현하지 않은 채 방치돼 있었다. 동시에
+    core/labels.ts의 in-app-purchase 정의 자체가 "비교·집계 시 핵심 수익모델 레이블과
+    분리해서 보는 것을 권장한다"고 이미 명시하고 있었다 — 즉 채점기(eval-service.ts)가
+    자기 taxonomy 문서의 권고를 어기고 있던 상태였다.
+  decision: |
+    core/labels.ts에 `SECONDARY_LABELS = ["in-app-purchase"]`를 export하고,
+    eval-service.ts의 evaluate()가 score(Jaccard)를 계산할 때는 이 레이블을 양쪽에서
+    제외하되, missing/extra 표시는 전체 레이블 기준으로 그대로 둬서(필터링된 걸로
+    바꾸지 않음) 정보 손실 없이 "집계는 핵심만, 화면은 전체"로 분리했다.
+  consequence: |
+    같은 reports/(2026-10-23~29에 생성됨)와 같은 gold/를 재채점만 했는데 71.5% ->
+    77.0%로 올랐다 — 새 리포트를 만들거나 새로 라벨링하지 않고 순수 채점 버그를 고친
+    결과라 신뢰도가 높다. 여전히 85% 미달. 남은 불일치(medium.com의 freemium, stripe.com의
+    subscription 등)를 들여다봤는데, DRE의 evidence-strict 원칙(ADR-003 — 증거 없는 주장은
+    하지 않음) 때문에 생긴 보수적 누락인지, 독립 라벨러가 일반 지식으로 과대추론한 것인지
+    이 세션에서는 구분할 방법이 없었다 — 같은 모델 계열의 또 다른 서브에이전트를 더
+    돌려도 같은 종류의 판단 차이가 반복될 뿐 새 신호를 주기 어렵다고 보고, 이번 라운드는
+    여기서 멈췄다. 다음 단계는 2026-10-25b와 동일하게 실제 제3자 사용 피드백이다.

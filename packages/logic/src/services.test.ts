@@ -48,3 +48,12 @@ test("evaluate averages per-target scores, matching by hostname", () => {
 test("evaluate with no gold returns mean 0", () => {
   assert.equal(evaluate([], []).mean, 0);
 });
+
+test("evaluate excludes in-app-purchase from scoring but still reports it as missing/extra", () => {
+  const res = evaluate(
+    [{ targetUrl: "https://a.com", labels: ["subscription", "in-app-purchase"] }],
+    [gold("https://a.com", ["subscription"])],
+  );
+  assert.equal(res.perTarget[0]!.score, 1);
+  assert.deepEqual(res.perTarget[0]!.extra, ["in-app-purchase"]);
+});
