@@ -73,10 +73,11 @@ function setup(args: string[]): void {
   if (results.some((r) => !r.ok)) process.exit(1);
 }
 
-function registerClaudeCode(scope: "user" | "project"): void {
+/** exec는 테스트에서 실제 claude CLI를 부르지 않도록 주입할 수 있다(기본: 진짜 execFileSync). */
+export function registerClaudeCode(scope: "user" | "project", exec: typeof execFileSync = execFileSync): void {
   console.log(`[claude] DRE MCP 서버를 등록합니다 (scope: ${scope})...`);
   try {
-    execFileSync(
+    exec(
       "claude",
       ["mcp", "add", "dre", "-s", scope, "-e", `DRE_REPORTS_DIR=${reportsDir}`, "--", "node", mcpServerPath],
       { stdio: "inherit" },
@@ -110,7 +111,7 @@ export function writeJsonMcpConfig(configPath: string, serverName: string, serve
   writeFileSync(configPath, `${JSON.stringify(config, null, 2)}\n`);
 }
 
-function registerCursor(scope: "user" | "project"): void {
+export function registerCursor(scope: "user" | "project"): void {
   const configPath = scope === "project" ? join(process.cwd(), ".cursor", "mcp.json") : join(homedir(), ".cursor", "mcp.json");
   console.log(`[cursor] DRE MCP 서버를 등록합니다 (${configPath})...`);
   writeJsonMcpConfig(configPath, "dre", {
@@ -120,7 +121,7 @@ function registerCursor(scope: "user" | "project"): void {
   });
 }
 
-function registerGemini(): void {
+export function registerGemini(): void {
   const configPath = join(homedir(), ".gemini", "settings.json");
   console.log(`[gemini] DRE MCP 서버를 등록합니다 (${configPath})... (프로젝트 범위는 지원하지 않습니다)`);
   writeJsonMcpConfig(configPath, "dre", {
@@ -171,7 +172,7 @@ export function upsertTomlTable(configPath: string, tableName: string, fields: R
   writeFileSync(configPath, `${newLines.join("\n").replace(/\s+$/, "")}\n`);
 }
 
-function registerCodex(): void {
+export function registerCodex(): void {
   const configPath = join(homedir(), ".codex", "config.toml");
   console.log(`[codex] DRE MCP 서버를 등록합니다 (${configPath})... (프로젝트 범위는 지원하지 않습니다)`);
   upsertTomlTable(configPath, "mcp_servers.dre", {
@@ -186,7 +187,7 @@ function registerCodex(): void {
  * upsertTomlTable()을 그대로 쓴다. 공식 문서 기준 프로젝트 범위(.grok/config.toml)가
  * 사용자 범위를 완전히 덮어쓰므로(병합 아님) 우리도 테이블 단위 전체 교체면 충분하다.
  */
-function registerGrok(scope: "user" | "project"): void {
+export function registerGrok(scope: "user" | "project"): void {
   const configPath = scope === "project" ? join(process.cwd(), ".grok", "config.toml") : join(homedir(), ".grok", "config.toml");
   console.log(`[grok] DRE MCP 서버를 등록합니다 (${configPath})...`);
   upsertTomlTable(configPath, "mcp_servers.dre", {

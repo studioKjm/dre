@@ -593,3 +593,27 @@
     실제 20-F 매출인정 주석을 봐도 Premium/Ad-Supported를 별도 항목으로 태깅하지 않아
     20-F/IFRS 지원을 추가해도 Spotify 건은 해결되지 않았을 것 — 확인 후 그 확장은
     하지 않기로 했다(검증되지 않은 효과를 위해 범위를 넓히지 않음).
+
+- id: ADR-021
+  title: "dre-agents의 register* 함수 5개 유닛테스트 — 마지막 수동-스모크-전용 로직 제거"
+  status: adopted
+  date: 2026-11-13
+  stacks: [nodejs, typescript]
+  context: |
+    ADR-016에서 cli.ts를 테스트 가능하게 리팩터링했지만, 실제 바이너리/파일을 건드리는
+    registerClaudeCode/Cursor/Gemini/Codex/Grok 5개는 "child_process 모킹 없이는 손으로
+    하는 스모크 테스트에 의존한다"는 known gap으로 남겨뒀다. REA 비교 체크리스트의
+    마지막 항목.
+  decision: |
+    registerClaudeCode(scope, exec = execFileSync)로 exec를 주입 가능하게 바꿔서(기본값은
+    진짜 execFileSync라 런타임 동작은 그대로) 실제 claude CLI를 부르지 않고 호출 인자와
+    에러 래핑을 검증할 수 있게 했다. 나머지 4개(Cursor/Gemini/Codex/Grok)는 이미
+    writeJsonMcpConfig/upsertTomlTable(ADR-013/014에서 테스트됨)에 위임하는 얇은 래퍼라
+    exec 같은 주입은 필요 없었다 — 대신 HOME과 cwd를 임시 디렉터리로 바꿔서(withTempHome/
+    withTempCwd, 테스트 종료 시 항상 원복) 실제 사용자 홈을 건드리지 않고 scope별
+    경로 선택(사용자 범위 vs 프로젝트 범위)이 맞는지 확인했다.
+  consequence: |
+    8개 테스트 추가(claude 2개, cursor/gemini/codex/grok 각 1~2개) — dre-agents 패키지
+    테스트 12개 -> 20개. 리팩터링 후 실제 CLI(`node dist/cli.js setup --agent=all`)가
+    5개 에이전트 전부 여전히 정상 등록하는지 재확인. 이제 dre-agents의 모든 공개 함수가
+    자동 테스트로 커버된다 — 수동 스모크 테스트에만 의존하는 로직이 더 없다.

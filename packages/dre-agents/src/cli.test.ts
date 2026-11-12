@@ -3,7 +3,17 @@ import assert from "node:assert/strict";
 import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { selectAgents, tomlValue, upsertTomlTable, writeJsonMcpConfig } from "./cli.js";
+import {
+  registerClaudeCode,
+  registerCodex,
+  registerCursor,
+  registerGemini,
+  registerGrok,
+  selectAgents,
+  tomlValue,
+  upsertTomlTable,
+  writeJsonMcpConfig,
+} from "./cli.js";
 
 function withTempDir<T>(fn: (dir: string) => T): T {
   const dir = mkdtempSync(join(tmpdir(), "dre-cli-test-"));
@@ -12,6 +22,34 @@ function withTempDir<T>(fn: (dir: string) => T): T {
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+}
+
+/** registerCursor/Gemini/Codex/Grok는 homedir()을 직접 쓴다 — 실제 홈을 건드리지 않도록
+ * HOME을 임시 디렉터리로 바꿔서 돌리고 항상 원래 값으로 되돌린다. */
+function withTempHome<T>(fn: (home: string) => T): T {
+  return withTempDir((home) => {
+    const original = process.env.HOME;
+    process.env.HOME = home;
+    try {
+      return fn(home);
+    } finally {
+      if (original === undefined) delete process.env.HOME;
+      else process.env.HOME = original;
+    }
+  });
+}
+
+/** registerCursor/Grok의 --project 경로는 process.cwd()를 쓴다 — 임시 디렉터리로 chdir한다. */
+function withTempCwd<T>(fn: (cwd: string) => T): T {
+  return withTempDir((cwd) => {
+    const original = process.cwd();
+    process.chdir(cwd);
+    try {
+      return fn(cwd);
+    } finally {
+      process.chdir(original);
+    }
+  });
 }
 
 test("tomlValue quotes strings, renders arrays and inline tables", () => {
@@ -124,4 +162,71 @@ test("selectAgents with an explicit list ignores detect() and filters by name", 
 test("selectAgents with an unknown name returns an empty list", () => {
   const agents = [{ name: "a", detect: () => true, register: () => {} }];
   assert.deepEqual(selectAgents(agents, ["nonexistent"]), []);
+});
+
+test("registerClaudeCode calls claude mcp add with the scope and MCP server path, via the injected exec", () => {
+  const calls: unknown[] = [];
+  registerClaudeCode("project", ((...args: unknown[]) => calls.push(args)) as typeof import("node:child_process").execFileSync);
+  const [bin, cmdArgs] = calls[0] as [string, string[]];
+  assert.equal(bin, "claude");
+  assert.deepEqual(cmdArgs.slice(0, 4), ["mcp", "add", "dre", "-s"]);
+  assert.equal(cmdArgs[4], "project");
+  assert.ok(cmdArgs.includes("node"));
+  assert.ok(cmdArgs.some((a) => a.startsWith("DRE_REPORTS_DIR=")));
+});
+
+test("registerClaudeCode wraps a failure with a friendly 'already registered' hint, not the raw error", () => {
+  const throwingExec = (() => {
+    throw new Error("exit code 1");
+  }) as typeof import("node:child_process").execFileSync;
+  assert.throws(() => registerClaudeCode("user", throwingExec), /claude mcp remove dre -s user/);
+});
+
+test("registerCursor (user scope) writes to ~/.cursor/mcp.json", () => {
+  withTempHome((home) => {
+    registerCursor("user");
+    const config = JSON.parse(readFileSync(join(home, ".cursor", "mcp.json"), "utf-8"));
+    assert.equal(config.mcpServers.dre.command, "node");
+  });
+});
+
+test("registerCursor (project scope) writes to <cwd>/.cursor/mcp.json instead", () => {
+  withTempCwd((cwd) => {
+    registerCursor("project");
+    const config = JSON.parse(readFileSync(join(cwd, ".cursor", "mcp.json"), "utf-8"));
+    assert.equal(config.mcpServers.dre.command, "node");
+  });
+});
+
+test("registerGemini always writes to ~/.gemini/settings.json (no project scope)", () => {
+  withTempHome((home) => {
+    registerGemini();
+    const config = JSON.parse(readFileSync(join(home, ".gemini", "settings.json"), "utf-8"));
+    assert.equal(config.mcpServers.dre.command, "node");
+  });
+});
+
+test("registerCodex writes a [mcp_servers.dre] table to ~/.codex/config.toml", () => {
+  withTempHome((home) => {
+    registerCodex();
+    const toml = readFileSync(join(home, ".codex", "config.toml"), "utf-8");
+    assert.match(toml, /\[mcp_servers\.dre\]/);
+    assert.match(toml, /command = "node"/);
+  });
+});
+
+test("registerGrok (user scope) writes to ~/.grok/config.toml", () => {
+  withTempHome((home) => {
+    registerGrok("user");
+    const toml = readFileSync(join(home, ".grok", "config.toml"), "utf-8");
+    assert.match(toml, /\[mcp_servers\.dre\]/);
+  });
+});
+
+test("registerGrok (project scope) writes to <cwd>/.grok/config.toml instead", () => {
+  withTempCwd((cwd) => {
+    registerGrok("project");
+    const toml = readFileSync(join(cwd, ".grok", "config.toml"), "utf-8");
+    assert.match(toml, /\[mcp_servers\.dre\]/);
+  });
 });
