@@ -1,0 +1,30 @@
+name: CodeQL
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  schedule:
+    # 매주 월요일 06:00 UTC — push/PR 없이도 새로 추가된 CodeQL 쿼리로 재점검한다.
+    - cron: "0 6 * * 1"
+
+jobs:
+  analyze:
+    name: Analyze (javascript-typescript)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+          build-mode: none
+
+      - uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:javascript-typescript"
