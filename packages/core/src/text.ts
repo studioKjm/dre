@@ -17,14 +17,15 @@ const TAG = /<[^>]{0,10000}>/g;
 /**
  * 태그를 지운 "뒤에" 엔티티를 디코딩하면, &lt;script&gt;처럼 인코딩된 태그가 결과에
  * 그대로 살아있다가 디코딩으로 다시 "<script>"가 돼버린다(CodeQL js/incomplete-
- * multi-character-sanitization이 실제로 찾아낸 문제) — 디코딩된 텍스트를 한 번 더
- * 태그 제거에 통과시킨다. 디코딩된 "<"/">"가 수식 비교(예: "5 < 10")처럼 진짜 꺾쇠인
- * 경우 이 2차 제거가 그 구간을 지워버릴 수 있지만, 가격/약관 페이지 본문에서는 드물고
- * 태그 재구성을 막는 쪽이 더 안전하다.
+ * multi-character-sanitization이 실제로 찾아낸 문제). 닫는 ">"가 있는 완전한 태그만
+ * 다시 지우는 걸로는 부족하다 — "<!--"나 "<script"는 ">"가 없어도(또는 멀리 떨어져
+ * 있어도) 그 자체로 위험하다고 CodeQL이 본다. 그래서 디코딩 후에는 남은 "<" 자체를
+ * 전부 지운다. 디코딩된 "<"/">"가 수식 비교(예: "5 < 10")인 드문 경우는 그 부호가
+ * 지워지는 대가를 감수한다 — 태그 재구성을 막는 쪽이 더 안전하다.
  */
 function stripReconstructedTags(s: string): string {
   const decoded = decodeEntities(s);
-  return decoded === s ? decoded : decoded.replace(TAG, "");
+  return decoded === s ? decoded : decoded.replace(/</g, "");
 }
 
 export function stripTags(s: string): string {
