@@ -169,6 +169,7 @@ export class PricingCollector {
     await this.policy.assertAllowed(url);
     const warnings: string[] = [];
     let result = await this.fetchAndExtract(url, opts, warnings);
+    let effectiveUrl = url;
 
     if (!result.items.length && !result.challenge) {
       const link = findPricingLink(result.page.body, result.page.finalUrl);
@@ -177,6 +178,20 @@ export class PricingCollector {
         const discovered = await this.fetchAndExtract(link, opts, warnings);
         warnings.push(`'${url}' had no price-like text; followed a same-origin pricing link to '${link}' instead`);
         result = discovered; // 원래 결과는 어차피 비어 있었으므로 그대로 교체한다
+        effectiveUrl = link;
+      }
+    }
+
+    // 정적 수집으로 가격 텍스트를 하나도 못 찾았고, 차단도 아니고, js:true를 아직 안 써봤다면
+    // — class101.net처럼 콘텐츠 자체가 React/Vue 등으로 클라이언트에서 렌더링되는 SPA일 수
+    // 있다(실측 확인: 정적으로는 0개, 렌더링하면 가격이 보인다). 브라우저가 없으면
+    // fetchAndExtract가 BrowserUnavailable을 조용히 정적 수집으로 폴백하므로, 여기서는
+    // 그냥 한 번 더 시도해 보고 안 되면 원래 결과를 그대로 쓴다.
+    if (!result.items.length && !result.challenge && !opts.js && this.renderer) {
+      const rendered = await this.fetchAndExtract(effectiveUrl, { js: true }, warnings);
+      if (rendered.items.length) {
+        warnings.push(`static fetch of '${effectiveUrl}' found no price-like text; retried with JS rendering and found some`);
+        result = rendered;
       }
     }
 

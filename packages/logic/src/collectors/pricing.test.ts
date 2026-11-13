@@ -91,6 +91,31 @@ test("js mode without a renderer warns and uses static fetch", async () => {
   assert.match(r.warnings[0]!, /no renderer configured/);
 });
 
+test("collect() retries with JS rendering automatically when static fetch finds nothing (real class101.net case)", async () => {
+  const url = "https://class101.net/";
+  const fetcher = new FakeFetcher({ [url]: "<div id=root></div>" }); // 정적 HTML엔 가격 텍스트가 전혀 없음(SPA)
+  const renderer: PageRenderer = { render: async () => rendered("<h3>마스터</h3><p>29,000원</p>") };
+  const r = await new PricingCollector(fetcher, allowAll(), renderer).collect(url); // js 플래그 없이 호출
+  assert.deepEqual(r.items.map((i) => i.priceText), ["29,000원"]);
+  assert.match(r.warnings.at(-1)!, /retried with JS rendering and found some/);
+});
+
+test("collect() does not retry with JS rendering when no renderer is configured", async () => {
+  const url = "https://class101.net/";
+  const r = await new PricingCollector(new FakeFetcher({ [url]: "<div id=root></div>" }), allowAll()).collect(url);
+  assert.deepEqual(r.items, []);
+  assert.match(r.warnings[0]!, /no price-like text found/);
+});
+
+test("collect() does not retry with JS rendering when the page is a bot-challenge, not a SPA", async () => {
+  const url = "https://a.com/";
+  const fetcher = new FakeFetcher({ [url]: "<title>보안문자 확인</title><body>보안문자를 입력하세요</body>" });
+  let renderCalls = 0;
+  const renderer: PageRenderer = { render: async () => { renderCalls++; return rendered("<h3>Pro</h3><p>$12/month</p>"); } };
+  await new PricingCollector(fetcher, allowAll(), renderer).collect(url);
+  assert.equal(renderCalls, 0);
+});
+
 test("extractPlanCandidates matches Korean 만/억-unit prices", () => {
   const items = extractPlanCandidates("구독\n개별 구매\n일반 이용\n개당 평균 20만원\n9만원 쿠폰팩\n9,900원 단품");
   assert.deepEqual(items.map((i) => i.priceText), ["20만원", "9만원", "9,900원"]);

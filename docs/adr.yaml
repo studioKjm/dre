@@ -617,3 +617,33 @@
     테스트 12개 -> 20개. 리팩터링 후 실제 CLI(`node dist/cli.js setup --agent=all`)가
     5개 에이전트 전부 여전히 정상 등록하는지 재확인. 이제 dre-agents의 모든 공개 함수가
     자동 테스트로 커버된다 — 수동 스모크 테스트에만 의존하는 로직이 더 없다.
+
+- id: ADR-022
+  title: "정적 수집 0개 + 비차단이면 js 렌더링 자동 재시도 — class101류 SPA 폴백"
+  status: adopted
+  date: 2026-11-13
+  stacks: [nodejs, typescript]
+  context: |
+    ADR-019에서 class101.net이 "JS 렌더링이라 정적 수집으로 가격 텍스트 자체가 0개"라고
+    확인했지만, collect_pricing의 js=true는 호출하는 에이전트가 직접 켜야 하는 옵션이라
+    에이전트가 그 사실을 모르면 그냥 빈 결과로 끝났다. PricingCollector는 이미 archive.org
+    폴백·pricing-link 자동 탐색처럼 "한 번 더 시도해보고 안 되면 원래 결과" 패턴을 쓰고
+    있어서, 같은 패턴을 js 렌더링에도 적용하면 됐다.
+  decision: |
+    collect()에서 (pricing-link 자동 탐색까지 끝낸 후) 가격 후보가 0개, 차단(challenge)도
+    아니고, 호출자가 아직 js:true를 안 썼고, renderer가 주어져 있으면 — 같은 URL로 한 번
+    더 fetchAndExtract(url, { js: true })를 시도한다. 성공하면(후보가 생기면) 그 결과로
+    교체하고 경고를 남긴다. 실패해도(renderer가 없거나 BrowserUnavailable) 기존
+    fetchAndExtract의 조용한 정적 폴백 로직이 그대로 동작해 추가 비용은 낭비성 재시도
+    한 번뿐이다. 차단(bot-challenge) 페이지는 "JS가 필요해서 비어있는" 게 아니라
+    "자동화를 막아서 비어있는" 거라 재시도 대상에서 제외한다(렌더링해도 같은 차단 페이지만
+    또 볼 뿐이고, 자동화 우회 시도로 보일 수 있다 — ADR-004/005).
+  consequence: |
+    실제 class101.net으로 검증: 정적 수집 0개 -> pricing-link 자동 탐색으로
+    '/ko?viewMode=svod'로 이동 -> 거기서도 0개 -> js 자동 재시도 -> 12개 후보(20만원,
+    무료, 9만원 쿠폰팩 등) 성공. AC-008 점수는 변화 없음(class101의 기존 리포트가 이미
+    collect 가능한 one-time/subscription을 다른 경로로 갖고 있었고, 남은 enterprise-sales는
+    이 JS 렌더링으로도 못 찾음 — ADR-019의 "외부 소스" 결론 재확인). 가치는 수집기
+    견고성이다: 에이전트가 js=true를 몰라도 SPA 사이트가 더 이상 자동으로 빈 결과를
+    주지 않는다. 테스트 3개 추가(자동 재시도 성공/renderer 없을 때 미재시도/차단 페이지
+    미재시도).
