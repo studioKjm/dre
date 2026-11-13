@@ -30,8 +30,10 @@ function isBotBlockLike(e: unknown): boolean {
 }
 
 // 한국어 가격은 "20만원", "9,900원"처럼 만/억 단위 수사가 숫자와 통화기호 사이에 올 수 있다.
+// [\d,]*를 길이 제한 없이 두면(CodeQL js/polynomial-redos) 숫자가 수만 개 이어지고 매칭이
+// 실패하는 입력에서 느려진다 — 실제 가격에 그만큼 긴 숫자는 없으니 20자로 자른다.
 const PRICE =
-  /(?:[$€£¥₩]\s?\d[\d,]*(?:\.\d+)?|\d[\d,]*(?:\.\d+)?\s?(?:천|만|억)?\s?(?:원|USD|KRW|EUR))(?:\s*\/\s*(?:month|mo|year|yr|월|년))?/i;
+  /(?:[$€£¥₩]\s?\d[\d,]{0,20}(?:\.\d+)?|\d[\d,]{0,20}(?:\.\d+)?\s?(?:천|만|억)?\s?(?:원|USD|KRW|EUR))(?:\s*\/\s*(?:month|mo|year|yr|월|년))?/i;
 const FREE = /^(?:free|무료)$/i;
 // 플랜 이름과 "Free"가 공백 없이 붙어 "BasicFree"처럼 되는 경우 — htmlToText가 블록
 // 태그에만 줄바꿈을 넣다 보니, 카드 레이아웃을 inline 요소로 짠 페이지(dropbox.com/plans
@@ -49,7 +51,7 @@ export function extractPlanCandidates(text: string): PlanCandidate[] {
     const price = PRICE.exec(line)?.[0] ?? (FREE.test(line) ? line : FREE_SUFFIX.test(line) ? "Free" : undefined);
     if (!price) return;
     const prev = lines.slice(Math.max(0, i - 2), i).reverse().find((l) => l.length <= 40 && !PRICE.test(l));
-    const name = line === price ? (prev ?? "") : line.replace(price, "").replace(/[:\-–|]+$/, "").trim() || (prev ?? "");
+    const name = line === price ? (prev ?? "") : line.replace(price, "").replace(/[:\-–|]{1,20}$/, "").trim() || (prev ?? "");
     const key = `${name}|${price}`;
     if (seen.has(key)) return;
     seen.add(key);

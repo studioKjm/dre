@@ -106,9 +106,11 @@ export interface FilingReport {
 /** FilingSummary.xml은 그 공시의 모든 재무제표/주석 페이지 목록이다(각 R##.htm 하나씩). */
 export function parseFilingSummary(xml: string): FilingReport[] {
   const reports: FilingReport[] = [];
-  for (const m of xml.matchAll(/<Report[^>]*>[\s\S]*?<\/Report>/g)) {
-    const shortName = /<ShortName>(.*?)<\/ShortName>/.exec(m[0])?.[1];
-    const htmlFile = /<HtmlFileName>(.*?)<\/HtmlFileName>/.exec(m[0])?.[1];
+  // 길이 제한(CodeQL js/polynomial-redos): SEC 응답은 신뢰하지만, 닫는 태그가 없는
+  // 비정상 응답에서 무제한 수량자가 느려지는 걸 막는다 — 실제 <Report> 블록은 이보다 작다.
+  for (const m of xml.matchAll(/<Report[^>]{0,1000}>[\s\S]{0,50000}?<\/Report>/g)) {
+    const shortName = /<ShortName>(.{0,1000}?)<\/ShortName>/.exec(m[0])?.[1];
+    const htmlFile = /<HtmlFileName>(.{0,1000}?)<\/HtmlFileName>/.exec(m[0])?.[1];
     if (shortName && htmlFile) reports.push({ shortName, htmlFile });
   }
   return reports;

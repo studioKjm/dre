@@ -647,3 +647,39 @@
     견고성이다: 에이전트가 js=true를 몰라도 SPA 사이트가 더 이상 자동으로 빈 결과를
     주지 않는다. 테스트 3개 추가(자동 재시도 성공/renderer 없을 때 미재시도/차단 페이지
     미재시도).
+
+- id: ADR-023
+  title: "CodeQL 도입 — grep 기반 check-security.sh 대신 진짜 데이터플로 분석"
+  status: adopted
+  date: 2026-11-13
+  stacks: [nodejs, typescript]
+  context: |
+    check-security.sh는 grep 패턴 매칭이라 이미 두 번 false positive를 냈다(ADR-012에서
+    기록: RegExp.exec()를 child_process.exec로, 테스트 헬퍼 allowAll을 Spring @PermitAll로
+    오탐). CodeQL은 실제 데이터플로/오염(taint) 분석이라 다른 종류의 신호를 준다.
+  decision: |
+    .github/workflows/codeql.yml 추가(javascript-typescript, build-mode: none — JS/TS는
+    컴파일 없이 소스만으로 분석됨). security-events: write 권한은 이 워크플로 자체의
+    permissions 블록에서 주는 것이라 release-please(ADR-018)처럼 저장소 설정 변경이
+    필요 없었다. v3로 처음 돌렸을 때 "2026년 12월 폐지 예정" 경고가 나와서 바로 v4로
+    올렸다.
+  consequence: |
+    첫 실행에서 실제로 14건을 찾았다. 전부 확인·조치:
+    (1) js/polynomial-redos 7건 — pricing.ts(PRICE, 이름 뒤 구분자 strip),
+    edgar.ts(FilingSummary.xml 파싱 3곳), appstore.ts(script 태그 파싱), core/text.ts
+    (태그·주석·script 제거 2곳) — DRE가 실제로 외부(공격 가능) HTML을 처리한다는 점에서
+    전부 진짜였다. 닫는 태그가 없는 입력에서 무제한 수량자가 시작 위치마다 끝까지 훑고
+    실패하길 반복해 O(n²)가 되는 패턴 — 모든 수량자를 합리적 상한으로 제한해서 고쳤다
+    (진짜 태그/가격/XML 요소가 그보다 길 일이 없다). 고치는 과정에서 정규식 `{0,10_000}`처럼
+    숫자 구분자 밑줄을 썼다가(JS 숫자 리터럴에서만 되고 정규식 수량자 문법에는 안 된다)
+    6개 테스트가 실패했다 — 로컬 `npm test`가 커밋 전에 바로 잡아내서 그대로 나가지
+    않았다(테스트 인프라가 실제로 작동한다는 증거). (2) js/incomplete-multi-character-
+    sanitization 4건 — core/text.ts의 htmlToText가 태그를 지운 "뒤에" 엔티티를
+    디코딩해서, `&lt;script&gt;`처럼 인코딩된 태그가 스트립을 통과한 뒤 디코딩으로
+    되살아날 수 있었다. 디코딩 후 한 번 더 스트립하는 2차 패스를 추가해서 막았다 —
+    디코딩된 "<"/">"가 진짜 수식 비교("5 < 10")인 드문 경우는 그 구간이 지워지는 대가를
+    감수했다(태그 재구성을 막는 쪽이 더 안전). (3) js/incomplete-url-substring-
+    sanitization 2건 — wayback.test.ts는 `.includes("web.archive.org")`를 호스트명
+    정확 비교로 고쳤다. terms.test.ts는 확인해보니 Array.prototype.includes(문자열
+    배열의 정확한 원소 일치)를 String.prototype.includes(부분 문자열 체크)로 오인한
+    진짜 오탐이라, 코드를 바꾸지 않고 GitHub API로 "false positive"로 dismiss했다.

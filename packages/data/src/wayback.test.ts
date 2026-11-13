@@ -21,7 +21,10 @@ test(
       console.warn("wayback.test: no network/snapshot available, skipping assertion");
       return;
     }
-    assert.ok(page.finalUrl.includes("web.archive.org"));
+    // 호스트명을 정확히 비교한다 — .includes("web.archive.org")는 "web.archive.org.evil.com"
+    // 같은 값도 통과시키는 느슨한 체크라 CodeQL(js/incomplete-url-substring-sanitization)이 잡아냈다.
+    const host = new URL(page.finalUrl).hostname;
+    assert.ok(host === "web.archive.org" || host.endsWith(".web.archive.org"));
     assert.match(page.body, /Example Domain/i);
   },
 );

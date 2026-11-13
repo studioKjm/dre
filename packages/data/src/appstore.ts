@@ -10,7 +10,9 @@ const obj = (v: unknown): Json | undefined => (v && typeof v === "object" && !Ar
 
 /** App Store 웹 페이지의 "In-App Purchases" 목록에서 상품명과 가격을 추출한다. */
 export function parseAppStore(html: string): RawProduct[] {
-  const raw = /<script[^>]*id="serialized-server-data"[^>]*>([\s\S]*?)<\/script>/i.exec(html)?.[1];
+  // 길이 제한(CodeQL js/polynomial-redos): 닫는 태그가 없는 악성/손상 입력에서 무제한
+  // [^>]*가 시작 위치마다 끝까지 훑고 실패하는 걸 막는다 — 진짜 script 태그 속성은 이렇게 길지 않다.
+  const raw = /<script[^>]{0,10000}id="serialized-server-data"[^>]{0,10000}>([\s\S]{0,5000000}?)<\/script>/i.exec(html)?.[1];
   if (!raw) return [];
   let data: unknown;
   try {
