@@ -32,11 +32,27 @@ export function stripTags(s: string): string {
   return stripReconstructedTags(s.replace(TAG, "")).replace(/\s+/g, " ").trim();
 }
 
+/**
+ * 한 번만 지우면 "<scr<!---->ipt>" 같은 겹친 입력에서 제거 후 "<script>"가 다시
+ * 만들어질 수 있다(CodeQL js/incomplete-multi-character-sanitization). 더 이상
+ * 안 바뀔 때까지(또는 과도한 입력에 대비해 상한 횟수까지) 반복 적용해서 완전히 없앤다.
+ */
+function replaceToFixedPoint(s: string, pattern: RegExp, maxIterations = 5): string {
+  let prev = s;
+  for (let i = 0; i < maxIterations; i++) {
+    const next = prev.replace(pattern, "");
+    if (next === prev) return next;
+    prev = next;
+  }
+  return prev;
+}
+
 /** HTML을 줄 단위 텍스트로 변환한다 (script/style 제거, 블록 태그는 줄바꿈). */
 export function htmlToText(html: string): string {
-  const withoutNoise = html
-    .replace(/<!--[\s\S]{0,100000}?-->/g, "")
-    .replace(/<(script|style|noscript)[\s\S]{0,1000000}?<\/\1>/gi, "");
+  const withoutNoise = replaceToFixedPoint(
+    replaceToFixedPoint(html, /<!--[\s\S]{0,100000}?-->/g),
+    /<(script|style|noscript)[\s\S]{0,1000000}?<\/\1>/gi,
+  );
   const withBreaks = withoutNoise.replace(
     /<\/?(?:p|div|li|ul|ol|br|h[1-6]|tr|section|article|header|footer|table|dl|dt|dd)\b[^>]{0,10000}>/gi,
     "\n",
