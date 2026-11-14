@@ -1,0 +1,24 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "packageManager": "npm",
+  "mutate": [
+    "packages/core/src/**/*.ts",
+    "!packages/core/src/**/*.test.ts",
+    "!packages/core/src/index.ts"
+  ],
+  "testRunner": "command",
+  "commandRunner": {
+    "command": "npx tsc -b packages/core && node --test packages/core/dist"
+  },
+  "reporters": [
+    "html",
+    "clear-text",
+    "progress"
+  ],
+  "thresholds": {
+    "high": 80,
+    "low": 60,
+    "break": 75
+  },
+  "tempDirName": ".stryker-tmp"
+}

@@ -70,6 +70,7 @@ with precise definitions — see [`packages/core/src/labels.ts`](packages/core/s
 npm install
 npm test
 node packages/cli/dist/index.js eval reports benchmarks/gold   # AC-008 accuracy check
+npm run mutation   # Stryker mutation testing — packages/core only, see CONTRIBUTING.md
 ```
 
 To rebuild the publishable `dre-agents` bundle after changing any package:

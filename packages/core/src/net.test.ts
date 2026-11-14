@@ -9,7 +9,20 @@ test("private and reserved IPv4 ranges are detected", () => {
 });
 
 test("public IPv4 addresses are allowed, including range edges", () => {
-  for (const ip of ["8.8.8.8", "172.15.0.1", "172.32.0.1", "192.169.0.1", "100.63.0.1", "93.184.216.34"]) {
+  for (const ip of ["8.8.8.8", "172.15.0.1", "172.32.0.1", "192.169.0.1", "100.63.0.1", "100.128.0.1", "93.184.216.34"]) {
+    assert.ok(!isPrivateAddress(ip), ip);
+  }
+});
+
+test("169.254.x.x (link-local) is private, but only that exact second octet", () => {
+  assert.ok(isPrivateAddress("169.254.1.1"));
+  assert.ok(!isPrivateAddress("169.253.1.1"));
+  assert.ok(!isPrivateAddress("169.255.1.1"));
+  assert.ok(!isPrivateAddress("168.254.1.1"));
+});
+
+test("malformed IPv4-shaped strings are not treated as private (not a bypass risk: the guard's job is only to flag recognized private ranges)", () => {
+  for (const ip of ["256.1.1.1", "1.2.3", "1.2.3.4.5", "1.2.3.-1", "1.2.3.a"]) {
     assert.ok(!isPrivateAddress(ip), ip);
   }
 });

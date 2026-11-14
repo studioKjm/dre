@@ -1,14 +1,24 @@
 {
   "name": "dre-monorepo",
   "private": true,
-  "workspaces": ["packages/*"],
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "build": "tsc -b",
-    "test": "npm run build && node --test $(find packages -path '*/dist/*' -name '*.test.js')"
+    "test": "npm run build && node --test $(find packages -path '*/dist/*' -name '*.test.js')",
+    "mutation": "stryker run"
   },
   "devDependencies": {
+    "@stryker-mutator/core": "^9.6.1",
     "@types/node": "^20.14.0",
     "typescript": "^5.6.0"
   },
-  "engines": { "node": ">=20" }
+  "engines": {
+    "node": ">=20"
+  },
+  "overrides": {
+    "minimatch": "^11.0.8",
+    "qs": "^6.17.1"
+  }
 }

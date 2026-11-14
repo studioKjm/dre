@@ -708,3 +708,39 @@
     '<' 제거)과도 달랐고, 정확한 조건(같은 패턴을 자기 출력에 다시 돌려서 변화가
     없을 때까지)을 실제 재스캔으로 확인해가며 맞췄다 — CI에 붙은 자동 스캐너를 상대로
     "로그 보고 고치고 다시 push"를 반복하는 게 그 자체로 유효한 개발 루프였다.
+
+- id: ADR-025
+  title: "Mutation testing(Stryker) 도입 — packages/core 한정, command 러너"
+  status: adopted
+  date: 2026-11-14
+  stacks: [nodejs, typescript]
+  context: |
+    REA 비교 체크리스트의 마지막 항목. 지금까지 "테스트 176개 통과"만 알 뿐, 그 테스트들이
+    실제로 버그를 잡는지는 몰랐다. Stryker에 node:test 전용 공식 러너가 없어서, 아무
+    쉘 명령이든 종료 코드로 pass/fail을 판단하는 "command" 러너를 썼다 — 이러면 테스트
+    프레임워크에 종속되지 않고 이미 쓰는 `tsc -b` + `node --test`를 그대로 재사용한다.
+    6개 패키지 전체가 아니라 packages/core(순수 함수, 보안 가드 포함)부터 시작 —
+    범위를 좁혀 러너가 실제로 빠르게 도는지부터 확인하는 게 먼저였다.
+  decision: |
+    stryker.config.json: mutate는 packages/core/src/**/*.ts(테스트·barrel export 제외),
+    commandRunner.command는 `npx tsc -b packages/core && node --test packages/core/dist`
+    (디렉터리를 주면 node가 재귀적으로 테스트 파일을 찾아줘서 쉘 글롭 `**` 전개 문제를
+    피한다 — 처음엔 `dist/**/*.test.js`를 썼다가 bash가 `**`를 재귀로 안 펼쳐서 실패했다).
+    @stryker-mutator/core 설치 중 생긴 새 취약점(minimatch, qs — 각각 stryker-core의
+    직접 의존성)은 npm overrides로 각각 최신 안전 버전으로 강제했다(stryker 자체를
+    구버전으로 내리는 `npm audit fix --force` 제안은 거부 — 그게 더 큰 퇴보였다).
+    .github/workflows/mutation.yml: packages/core 변경 PR + 주간 스케줄 + 수동 실행 —
+    매 push마다는 안 돈다(한 번에 ~1분, CodeQL/CI와 달리 "매번 돌 필요는 없는" 성격).
+    thresholds.break=75로 설정해 앞으로 이 숫자 아래로 떨어지면 CI가 막는다.
+  consequence: |
+    첫 측정 65.60% — errors.ts/render.ts/labels.ts 셋 다 "테스트가 통과는 하지만 그
+    파일의 로직을 실제로 검증하진 않는" 상태였다(각각 0%, 0%, 5.56%). 세 파일에 직접
+    테스트를 추가하고(에러 메시지·속성 포맷, 마크다운 렌더링의 범위/증거/가정 줄,
+    taxonomy 10개·정의·보조 레이블 목록), net.ts의 SSRF 가드(isPrivateAddress)에
+    169.254 경계값과 손상된 IPv4 문자열(256.1.1.1 등) 테스트를 추가했다 — 보안
+    핵심 코드인데 경계 조건이 비어 있던 걸 뮤테이션 테스트가 찾아낸 것. 최종
+    80.17%(65.60에서 +14.57pt), 테스트 169개 추가(35개). text.ts는 56.67%에서 멈췄다 —
+    남은 생존 뮤턴트가 대부분 `[\s\S]` vs `[\S\S]`/`[\s\s]` 같은 실질적으로 동치인
+    정규식 변형이라 더 쫓지 않았다. 대가: 나머지 5개 패키지(data/logic/app/cli/mcp)는
+    여전히 범위 밖이다 — 이번 라운드는 "작동하는 걸 증명"이 목표였고, 확장은 다음
+    기회로 남긴다.

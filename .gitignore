@@ -1,6 +1,7 @@
 node_modules
 dist
 dist-test
+.stryker-tmp
 *.tsbuildinfo
 .env
 .env.local

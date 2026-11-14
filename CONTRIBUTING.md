@@ -38,6 +38,15 @@ manually: `cd packages/dre-agents && npm run build`.
 - Write tests alongside the implementation, not after. Logic-layer code should have little to
   no mocking; data-layer code should hit the real external surface where practical.
 
+## Mutation testing
+
+`npm run mutation` runs Stryker against `packages/core/src/`, the one package currently wired up
+(see `stryker.config.json` and `docs/adr.yaml` for why — grep-based `check-security.sh` already
+produced two false positives, so this checks whether tests actually catch bugs, not just whether
+they pass). CI runs it on PRs touching `packages/core`, weekly, and on manual dispatch — not on
+every push, since a full run takes roughly a minute. If you touch `packages/core/src/`, consider
+running it locally; a surviving mutant usually means a missing assertion, not a bug.
+
 ## Adding a collector
 
 A collector lives in `packages/logic/src/collectors/`, wraps a `packages/data/src/*.ts` fetcher,
