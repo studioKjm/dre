@@ -29,6 +29,11 @@ test("detects CDN/hosting from response headers, not just body", () => {
   );
 });
 
+test("detects Akamai from the server header (coupang.com's own 403 WAF response, confirmed live)", () => {
+  const signals = detectTechStack(page("<html></html>", { server: "AkamaiGHost" }));
+  assert.deepEqual(signals.map((s) => [s.name, s.evidenceText]), [["Akamai", "server: AkamaiGHost"]]);
+});
+
 test("returns [] when nothing matches, and does not false-positive on a plain page", () => {
   assert.deepEqual(detectTechStack(page("<html><body><h1>Hello</h1></body></html>")), []);
 });

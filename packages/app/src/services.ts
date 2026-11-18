@@ -76,7 +76,8 @@ export function createServices(opts: ServiceOptions = {}) {
   // 리다이렉트·페이지 이동 대상도 같은 robots 정책으로 다시 검사한다.
   const recheck = (url: string) => policy.assertAllowed(url);
   const fetcher = {
-    get: (url: string) => fetchPage(url, { userAgent, allowPrivate: allowPrivateNetwork, onRedirect: recheck }),
+    get: (url: string, getOpts?: { allowErrorStatus?: boolean }) =>
+      fetchPage(url, { userAgent, allowPrivate: allowPrivateNetwork, onRedirect: recheck, ...getOpts }),
   };
   const renderer = {
     render: (url: string) => renderPage(url, { userAgent, allowPrivate: allowPrivateNetwork, onNavigate: recheck }),

@@ -6,7 +6,8 @@ export interface RobotsSource {
 }
 
 export interface PageFetcher {
-  get(url: string): Promise<RawPage>;
+  /** opts.allowErrorStatus: true면 4xx/5xx 응답도 거부 대신 RawPage로 반환한다(헤더가 증거인 경우용). */
+  get(url: string, opts?: { allowErrorStatus?: boolean }): Promise<RawPage>;
 }
 
 export interface PageRenderer {

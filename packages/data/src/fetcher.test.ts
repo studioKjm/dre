@@ -33,6 +33,16 @@ test("fetchPage rejects 5xx and 404 with kind http", async () => {
   } finally { s.close(); }
 });
 
+test("fetchPage returns the RawPage (with headers) instead of throwing when allowErrorStatus is true", async () => {
+  const s = await serve((_, res) => { res.statusCode = 403; res.setHeader("server", "cloudflare"); res.end("Access denied"); });
+  try {
+    const page = await fetchPage(s.origin, { ...PRIV, allowErrorStatus: true });
+    assert.equal(page.status, 403);
+    assert.equal(page.headers?.server, "cloudflare");
+    assert.equal(page.body, "Access denied");
+  } finally { s.close(); }
+});
+
 test("fetchPage enforces the size limit", async () => {
   const s = await serve((_, res) => res.end("x".repeat(5000)));
   try {

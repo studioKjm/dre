@@ -13,6 +13,13 @@ export interface FetchOptions {
   allowPrivate?: boolean;
   /** 리다이렉트 대상 URL마다 호출된다. 던지면 수집이 중단된다 (robots.txt 재검사용). */
   onRedirect?: (nextUrl: string) => Promise<void>;
+  /**
+   * true면 4xx/5xx 응답도 던지지 않고 RawPage(헤더+본문 포함)로 그대로 반환한다.
+   * collect_techstack처럼 응답 헤더 자체가 증거인 수집기용 — 차단 응답(403 등)에도
+   * CDN/WAF 헤더는 실려 있는데, 기본 동작(바로 FetchError)은 그 헤더를 볼 기회조차
+   * 주지 않는다. 가격/약관처럼 본문 내용을 신뢰해야 하는 수집기는 기본값(false)을 쓴다.
+   */
+  allowErrorStatus?: boolean;
 }
 
 /** 리다이렉트를 직접 따라가며 매 홉마다 주소 검사와 onRedirect 훅을 실행한다. */
@@ -48,10 +55,10 @@ async function request(
 }
 
 export async function fetchPage(url: string, opts: FetchOptions = {}): Promise<RawPage> {
-  const { timeoutMs = 15_000, maxBytes = 6_000_000 } = opts;
+  const { timeoutMs = 15_000, maxBytes = 6_000_000, allowErrorStatus = false } = opts;
   const signal = AbortSignal.timeout(timeoutMs);
   const { res, finalUrl } = await request(url, opts, signal);
-  if (res.status >= 400) throw new FetchError(finalUrl, "http", res.status);
+  if (res.status >= 400 && !allowErrorStatus) throw new FetchError(finalUrl, "http", res.status);
 
   const chunks: Uint8Array[] = [];
   let size = 0;

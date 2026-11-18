@@ -190,10 +190,17 @@ export class PricingCollector {
     // fetchAndExtract가 BrowserUnavailable을 조용히 정적 수집으로 폴백하므로, 여기서는
     // 그냥 한 번 더 시도해 보고 안 되면 원래 결과를 그대로 쓴다.
     if (!result.items.length && !result.challenge && !opts.js && this.renderer) {
-      const rendered = await this.fetchAndExtract(effectiveUrl, { js: true }, warnings);
-      if (rendered.items.length) {
-        warnings.push(`static fetch of '${effectiveUrl}' found no price-like text; retried with JS rendering and found some`);
-        result = rendered;
+      try {
+        const rendered = await this.fetchAndExtract(effectiveUrl, { js: true }, warnings);
+        if (rendered.items.length) {
+          warnings.push(`static fetch of '${effectiveUrl}' found no price-like text; retried with JS rendering and found some`);
+          result = rendered;
+        }
+      } catch (e) {
+        // 렌더링 재시도 자체가 실패해도(예: duolingo.com 실측 — networkidle2를 끝내 못 만족해
+        // 30초 타임아웃) 이미 확보한 정적 수집 결과를 버리지 않는다. 가격 후보는 0개라도
+        // 페이지 텍스트 자체는 증거로 남아 있으니, 전체를 실패시키는 대신 경고만 남긴다.
+        warnings.push(`JS-rendering retry of '${effectiveUrl}' failed (${(e as Error).message}); using the static fetch result instead`);
       }
     }
 

@@ -23,6 +23,17 @@ new entries land under a version heading (see `docs/adr.yaml` ADR-011 for the pu
 - `examples/` — a golden-path run and an honest-failure (bot-blocked) run
 
 ### Fixed
+- `collect_techstack` actually failed outright on the exact case its "can't be blocked" claim
+  is about: a 4xx/5xx block response's headers (e.g. a WAF's `server` header) were discarded
+  before the collector ever saw them, because the shared fetcher threw on any error status
+  before reading headers. Found live-testing coupang.com (403, `server: AkamaiGHost` — also
+  added as a new signature); fixed via an opt-in `allowErrorStatus` fetch mode used only by
+  `collect_techstack` (see ADR-027)
+- `collect_pricing`'s automatic JS-rendering retry (for SPA pages that return no price-like
+  text statically) could throw on any error other than `BrowserUnavailable`/`AutomationBlocked`
+  — e.g. a plain navigation timeout on a slow page with heavy tracking scripts — discarding an
+  already-successful static fetch result and reporting the whole collector as failed instead of
+  degrading gracefully with a warning (found live-testing duolingo.com, see ADR-026)
 - AC-008 eval scoring counted the secondary `in-app-purchase` label against the core
   revenue-model match score, contrary to its own documented recommendation; excluding it moved
   the measured score from 71.5% to 77.0% on the same reports/gold (see ADR-017)

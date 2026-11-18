@@ -12,11 +12,19 @@ export class TechStackCollector {
     private readonly policy: CrawlPolicy,
   ) {}
 
-  /** robots 불허 시 RobotsDisallowed로 중단한다. 응답 헤더와 HTML에서 기술스택 신호를 찾는다. */
+  /**
+   * robots 불허 시 RobotsDisallowed로 중단한다. 응답 헤더와 HTML에서 기술스택 신호를 찾는다.
+   * 403 등 차단 응답도 allowErrorStatus:true로 받는다 — 헤더(CDN/WAF 서명)는 차단 응답에도
+   * 실려 있고, 그게 바로 "차단으로도 못 막는다"는 이 도구의 핵심 전제다(coupang.com 실측:
+   * 403이라 FetchError를 그냥 던지면 그 헤더를 볼 기회조차 없었다).
+   */
   async collect(url: string): Promise<Collected<TechSignal>> {
     await this.policy.assertAllowed(url);
-    const page = await this.fetcher.get(url);
+    const page = await this.fetcher.get(url, { allowErrorStatus: true });
     const warnings: string[] = [];
+    if (page.status >= 400) {
+      warnings.push(`target responded with HTTP ${page.status}; signals below come from that error response's own headers, not a normal page load`);
+    }
 
     const challenge = detectBotChallenge(htmlToText(page.body));
     if (challenge) {

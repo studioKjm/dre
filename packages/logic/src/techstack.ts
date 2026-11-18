@@ -39,6 +39,8 @@ const RULES: Rule[] = [
   { name: "Cloudflare", category: "cdn-hosting", header: { key: "server", valuePattern: /cloudflare/i } },
   { name: "Vercel", category: "cdn-hosting", header: { key: "x-vercel-id" } },
   { name: "AWS CloudFront", category: "cdn-hosting", header: { key: "x-amz-cf-id" } },
+  // coupang.com 실측(403 WAF 차단 응답)에서 확인: server: AkamaiGHost.
+  { name: "Akamai", category: "cdn-hosting", header: { key: "server", valuePattern: /akamaighost/i } },
   { name: "Express (Node.js)", category: "framework", header: { key: "x-powered-by", valuePattern: /express/i } },
 ];
 

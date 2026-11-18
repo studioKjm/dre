@@ -28,6 +28,14 @@ test("warns when nothing matches", async () => {
   assert.match(r.warnings[0]!, /no known technology signatures matched/);
 });
 
+test("reads signals from a 403's own headers instead of failing outright (coupang.com-style WAF block)", async () => {
+  const url = "https://a.com/";
+  const fetcher = new FakeFetcher({ [url]: { body: "Access denied", status: 403, headers: { server: "cloudflare" } } });
+  const r = await new TechStackCollector(fetcher, allowAll()).collect(url);
+  assert.deepEqual(r.items.map((s) => s.name), ["Cloudflare"]);
+  assert.match(r.warnings[0]!, /HTTP 403.*not a normal page load/);
+});
+
 test("a CAPTCHA page returns no signals, with a specific warning, instead of misattributing its own stack", async () => {
   const url = "https://a.com/";
   const r = await new TechStackCollector(

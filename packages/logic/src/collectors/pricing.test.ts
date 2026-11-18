@@ -84,6 +84,15 @@ test("js mode propagates unexpected renderer errors", async () => {
   await assert.rejects(new PricingCollector(new FakeFetcher({}), allowAll(), renderer).collect(url, { js: true }), /boom/);
 });
 
+test("auto JS retry failing (e.g. navigation timeout) keeps the static result instead of rejecting", async () => {
+  const url = "https://a.com/";
+  const fetcher = new FakeFetcher({ [url]: "<div id=root></div>" }); // 정적으로는 가격 후보 0개
+  const renderer: PageRenderer = { render: async () => { throw new Error("Navigation timeout of 30000 ms exceeded"); } };
+  const r = await new PricingCollector(fetcher, allowAll(), renderer).collect(url); // js:true 없이 호출 → 자동 재시도 경로
+  assert.equal(r.items.length, 0);
+  assert.match(r.warnings.find((w) => w.includes("JS-rendering retry"))!, /Navigation timeout of 30000 ms exceeded.*using the static fetch result/);
+});
+
 test("js mode without a renderer warns and uses static fetch", async () => {
   const url = "https://a.com/pricing";
   const r = await new PricingCollector(new FakeFetcher({ [url]: "<h3>Pro</h3><p>$12/month</p>" }), allowAll()).collect(url, { js: true });
