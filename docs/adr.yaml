@@ -812,3 +812,30 @@
     국한한 이유: pricing/terms 같은 본문-신뢰형 수집기까지 allowErrorStatus를 기본 허용으로
     바꾸면 차단 페이지의 가짜 콘텐츠(예: CAPTCHA 안내문)를 "관측값"으로 오인할 위험이
     생긴다 — 그건 이 프로젝트의 핵심 원칙(관측 vs 추정 구분)과 충돌한다.
+
+- id: ADR-028
+  title: "dre analyze CLI: 항상 빈 리포트만 찍던 스텁을 실제 수집기 호출로 교체"
+  status: adopted
+  date: 2026-11-21
+  stacks: [nodejs, typescript]
+  context: |
+    packages/cli/src/commands.ts의 runAnalyze가 "수집기·분석기 연결 전까지는 빈 리포트를
+    출력한다"는 주석을 단 채로 남아 있었다 — createServices()/CompanyAnalyzer가 이미
+    packages/app에 완성돼 있고 MCP 서버(analyze_company)는 실제로 그걸 쓰는데, CLI만
+    연결이 안 된 채 방치돼 있었다. `dre analyze <아무URL>`을 실행하면 타겟과 무관하게
+    항상 같은 빈 마크다운만 나왔다. README에 이 한계가 적혀 있지도 않아, CLI만 써 본
+    사람은 DRE가 아무것도 수집 못 한다고 오해할 수 있었다.
+  decision: |
+    runAnalyze가 services.company.analyze(domain)을 실제로 호출하도록 바꿨다(runEval과
+    같은 DI 패턴 — 기본값 createServices(), 테스트는 Pick<Services["company"], "analyze">
+    만 주입). 출력은 renderMarkdown으로 만든 가짜 claim-based 리포트가 아니라 수집기
+    원시 결과(JSON) 그대로다 — ADR-003(DRE는 스스로 LLM을 불러 증거를 레이블로 바꾸지
+    않는다)과 그대로 맞물린다: CLI에는 에이전트가 없으니 라벨링된 리포트를 만들 수
+    없고, 만드는 척하면 안 된다. 입력이 URL 형태면 hostname만 뽑아 domain으로 쓴다.
+    README Develop 섹션에 analyze 사용법과 "라벨링된 리포트가 필요하면 MCP 툴을 에이전트가
+    호출하라"는 한계를 명시했다.
+  consequence: |
+    notion.com 실측: 4개 수집기(pricing/terms/techstack/adlibrary) 전부 ok:true로 실제
+    데이터 반환 확인. 테스트 3개 추가(usage 에러, URL→hostname 추출, 수집기 에러 전파).
+    여전히 안 되는 것: analyze_company가 하는 "증거를 읽고 revenueModelLabels를 매기는"
+    작업은 CLI 단독으로는 못 한다 — 그건 애초에 DRE의 책임이 아니다(에이전트의 일).

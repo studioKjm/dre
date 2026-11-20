@@ -23,6 +23,12 @@ new entries land under a version heading (see `docs/adr.yaml` ADR-011 for the pu
 - `examples/` — a golden-path run and an honest-failure (bot-blocked) run
 
 ### Fixed
+- `dre analyze <url>` was a stub that always printed an empty report regardless of the target
+  (a placeholder left over from before the collectors were wired up) — it now actually calls
+  `CompanyAnalyzer` and prints the raw collector snapshot as JSON. It still doesn't produce a
+  labeled claim-based report the way `analyze_company` does when called by an agent — DRE never
+  labels claims itself (ADR-003) — but it's real data instead of always-empty markdown (see
+  ADR-028)
 - `collect_techstack` actually failed outright on the exact case its "can't be blocked" claim
   is about: a 4xx/5xx block response's headers (e.g. a WAF's `server` header) were discarded
   before the collector ever saw them, because the shared fetcher threw on any error status

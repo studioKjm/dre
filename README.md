@@ -70,6 +70,10 @@ with precise definitions — see [`packages/core/src/labels.ts`](packages/core/s
 npm install
 npm test
 node packages/cli/dist/index.js eval reports benchmarks/gold   # AC-008 accuracy check
+node packages/cli/dist/index.js analyze <domain>                # raw collector output (JSON); DRE
+                                                                  # itself never labels claims (ADR-003)
+                                                                  # — for a labeled report, call the
+                                                                  # analyze_company MCP tool from an agent
 npm run mutation   # Stryker mutation testing — packages/core only, see CONTRIBUTING.md
 ```
 
