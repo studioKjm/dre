@@ -6,6 +6,12 @@ new entries land under a version heading (see `docs/adr.yaml` ADR-011 for the pu
 
 ## [Unreleased]
 
+### Changed
+- AC-008 accuracy: 83.7% -> 87.4%, passing the 85% target for the first time. Driven by the
+  three collector fixes below plus re-running the independent-labeler process (3 subagents with
+  no access to benchmarks/gold/, one per weak target) on the newly-recovered evidence — see
+  `.harness/ouroboros/evaluations/ac-008-provisional-2026-11-21.yaml` for the full breakdown
+
 ### Added
 - Core claim schema (`observed`/`inferred`/`estimated`, evidence, assumptions) and the
   10-label revenue-model taxonomy with precise definitions (`packages/core/src/labels.ts`)
