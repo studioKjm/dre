@@ -23,6 +23,13 @@ new entries land under a version heading (see `docs/adr.yaml` ADR-011 for the pu
 - `examples/` — a golden-path run and an honest-failure (bot-blocked) run
 
 ### Fixed
+- `collect_terms` had no archive.org fallback at all (unlike `collect_pricing`, which already
+  had one) — a blocked home page (e.g. coupang.com's 403) failed the whole collector instead of
+  degrading gracefully, and even after adding a home-page fallback, a candidate terms link that
+  403s on the live site (while the home page itself was only recoverable via archive.org) still
+  killed the whole result. Both are now handled the same way `collect_pricing` handles them: the
+  home page falls back to archive.org, and an individual blocked candidate link is skipped with
+  a warning instead of aborting everything already found (see ADR-029)
 - `dre analyze <url>` was a stub that always printed an empty report regardless of the target
   (a placeholder left over from before the collectors were wired up) — it now actually calls
   `CompanyAnalyzer` and prints the raw collector snapshot as JSON. It still doesn't produce a

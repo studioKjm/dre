@@ -839,3 +839,32 @@
     데이터 반환 확인. 테스트 3개 추가(usage 에러, URL→hostname 추출, 수집기 에러 전파).
     여전히 안 되는 것: analyze_company가 하는 "증거를 읽고 revenueModelLabels를 매기는"
     작업은 CLI 단독으로는 못 한다 — 그건 애초에 DRE의 책임이 아니다(에이전트의 일).
+
+- id: ADR-029
+  title: "collect_terms에 pricing과 같은 archive.org 폴백 추가 (홈페이지 + 후보 링크 양쪽)"
+  status: adopted
+  date: 2026-11-21
+  stacks: [nodejs, typescript]
+  context: |
+    coupang.com 실측을 techstack 수정 이후에도 계속하다 보니, terms도 여전히 통째로
+    실패하고 있었다(`ok:false, FetchError 403`). pricing.ts는 홈페이지 fetch가 봇 차단류
+    오류(FetchError kind "http")면 archive.org로 폴백하는데, terms.ts는 같은 패턴이
+    아예 없었다 — 홈페이지 fetch에 try/catch조차 없었다. 1차 수정(홈페이지만 archive
+    폴백)을 넣고 coupang.com으로 재확인하니, 이번엔 아카이브에서 복구한 홈페이지가
+    가리키는 "약관" 링크 자체가 라이브 coupang.com 페이지라 그것도 403이 나서 collect()
+    전체가 다시 죽었다 — 링크 하나가 막혔다고 이미 찾은 나머지 결과까지 버리는 건
+    terms.ts의 기존 RobotsDisallowed 처리 방식과도 모순이었다.
+  decision: |
+    pricing.ts의 isBotBlockLike(FetchError kind "http")를 terms.ts에도 두고(두 파일이
+    거의 같은 판단이라 작은 중복을 그대로 뒀다 — 공유 유틸로 추출할 만큼 복잡하지 않다),
+    두 지점에 적용했다: (1) 홈페이지 fetch가 봇 차단류로 실패하면 archive가 있을 때
+    archive.org 스냅샷으로 교체(pricing.ts와 동일한 경고 문구), 실패하면 원래 오류를
+    그대로 던진다. (2) 후보 링크 fetch 루프의 catch에 RobotsDisallowed와 나란히
+    isBotBlockLike도 추가해 "skipped <link>: <이유>" 경고만 남기고 다음 후보로 넘어간다
+    (이 링크 각각까지 archive.org로 또 폴백하지는 않는다 — 비용 대비 실익이 낮다고
+    판단, 홈페이지 수준의 폴백으로 충분).
+  consequence: |
+    coupang.com 실측 재확인: 수정 전 `terms.ok=false` → 수정 후 `terms.ok=true`,
+    실제 환불/구독 관련 문구 3건 회수(홈은 archive.org 스냅샷, 그 안의 약관 링크는
+    라이브에서 403이라 스킵 경고만 남고 그때까지 모은 결과는 보존). 테스트 3개 추가
+    (187개 전체 통과).

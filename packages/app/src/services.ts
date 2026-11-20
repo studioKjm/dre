@@ -94,7 +94,7 @@ export function createServices(opts: ServiceOptions = {}) {
   const store = new ReportStore(reportsDir);
 
   const pricing = new PricingCollector(fetcher, policy, renderer, archive);
-  const terms = new TermsCollector(fetcher, policy);
+  const terms = new TermsCollector(fetcher, policy, archive);
   const techstack = new TechStackCollector(fetcher, policy);
   const adlibrary = new AdLibraryCollector(renderer, policy);
   const edgar = new EdgarCollector({
