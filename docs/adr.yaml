@@ -898,3 +898,35 @@
     text.ts: 56.67% -> 83.33%. packages/core 전체: 80.17% -> 84.84%. 테스트 14개 추가
     (197개 전체 통과). 남은 10개 생존 뮤턴트는 전부 위에서 다루지 않기로 한 두 범주
     (루프 경계, 정규식 동치)뿐이다.
+
+- id: ADR-031
+  title: "뮤테이션 테스트를 packages/data로 확장 시도 — 보류 (puppeteer 테스트가 뮤턴트마다 20초 타임아웃에 걸림)"
+  status: declined
+  date: 2026-11-23
+  stacks: [nodejs, typescript]
+  context: |
+    ADR-025의 "packages/core부터 시작, 확장은 다음 기회로"를 이어 packages/data(13개
+    소스 파일)를 stryker.config.json의 mutate 범위에 추가해봤다. 커맨드 러너를
+    `tsc -b packages/core packages/data && node --test packages/core/dist packages/data/dist`
+    로 바꾸고, archive.org 실네트워크 테스트(wayback.test.ts)는 기존에 있던
+    DRE_SKIP_NETWORK_TESTS 환경변수로 건너뛰게 했다. 로컬에서 한 번 돌려보니 1272개
+    뮤턴트 중 38분이 지나 95%까지밖에 못 갔고, 그중 1049개가 "timed out"이었다 —
+    core 단독일 때 340개 뮤턴트가 51초에 끝나던 것과 비교가 안 되는 수준.
+  decision: |
+    원인을 추적해보니 packages/data/src/browser.test.ts가 실제 Chrome을 puppeteer로
+    띄우고 각 테스트에 20초 타임아웃을 건다(browser.ts의 renderPage를 실제 브라우저로
+    검증하는 통합 테스트 — 이게 이 파일의 존재 이유이고 그 자체로는 정당하다). browser.ts
+    자체를 뮤테이션하면 타임아웃/로직이 깨진 뮤턴트 다수가 실제로 20초 가까이 걸려
+    멈춰버리고, Stryker가 뮤턴트마다 전체 재빌드+재실행을 하는 "command" 러너 구조상
+    이게 수백 번 반복되며 누적된다. packages/core는 전부 순수 함수라 이 문제가 없었는데,
+    data는 실제 I/O(fetch, puppeteer, archive.org)를 다루는 파일과 순수 로직 파일이
+    섞여 있어 같은 접근이 안 맞는다. CONTRIBUTING.md가 약속한 "~1분" 실행 시간과
+    주간 스케줄 CI 전제가 깨지므로, data 확장은 stryker.config.json에서 되돌리고
+    (mutate/command 둘 다 core 전용으로 원복) 보류한다.
+  consequence: |
+    stryker.config.json은 커밋된 상태와 diff 없이 원복 확인(core 전용 84.84% 유지).
+    향후 data로 확장하려면 browser.ts(와 puppeteer를 쓰는 다른 수집기 경로)를 core의
+    index.ts처럼 mutate 대상에서 제외하거나, command 러너 대신 뮤턴트당 재시작 비용이
+    적은 다른 러너로 바꾸는 게 먼저다 — 지금 구조로 무작정 확장하는 건 비용 대비
+    실익이 낮다고 판단해 손대지 않았다. logic/app/cli/mcp 확장도 같은 이유(pricing/
+    adlibrary 등이 결국 puppeteer 경로에 닿는다)로 보류.

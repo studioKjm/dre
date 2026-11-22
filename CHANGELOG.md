@@ -6,6 +6,14 @@ new entries land under a version heading (see `docs/adr.yaml` ADR-011 for the pu
 
 ## [Unreleased]
 
+### Investigated and declined
+- Expanding mutation testing to `packages/data`: a trial run hit 1049/1272 mutants timing out
+  over 38 minutes (vs. 51 seconds for `packages/core` alone), because `browser.test.ts` launches
+  real Chrome with 20s-per-test timeouts and a broken-by-mutation `browser.ts` repeatedly stalls
+  near that timeout across hundreds of mutants. Reverted to `packages/core`-only (no net diff in
+  `stryker.config.json`); see ADR-031 for what would need to change first (excluding `browser.ts`
+  from mutation, or a cheaper test runner) before this is worth attempting again
+
 ### Added
 - `.github/dependabot.yml` (npm workspace root + github-actions, weekly, minor/patch grouped)
   and `.github/ISSUE_TEMPLATE/` (bug report, feature request, security-report redirect) — repo
