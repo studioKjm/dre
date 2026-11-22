@@ -1,0 +1,19 @@
+version: 2
+updates:
+  # npm workspaces monorepo — a single root entry covers packages/* too (Dependabot resolves
+  # the workspace graph from the root package.json/package-lock.json).
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    groups:
+      # 같은 생태계의 minor/patch는 한 PR로 묶는다 — CI 7개 게이트 + mutation을 패키지마다
+      # 따로 도는 PR 수를 줄인다. major는 호환성 영향이 커서 묶지 않고 개별 PR로 받는다.
+      npm-minor-patch:
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"

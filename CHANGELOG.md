@@ -6,6 +6,11 @@ new entries land under a version heading (see `docs/adr.yaml` ADR-011 for the pu
 
 ## [Unreleased]
 
+### Added
+- `.github/dependabot.yml` (npm workspace root + github-actions, weekly, minor/patch grouped)
+  and `.github/ISSUE_TEMPLATE/` (bug report, feature request, security-report redirect) — repo
+  hygiene that was just missing, not a design decision
+
 ### Changed
 - `packages/core` mutation score: 80.17% -> 84.84%, driven by `text.ts`'s score going from
   56.67% to 83.33% (it was the weakest file called out when Stryker was first introduced).
