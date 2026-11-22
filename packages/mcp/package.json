@@ -8,7 +8,7 @@
   "dependencies": {
     "@dre/app": "0.0.1",
     "@dre/core": "0.0.1",
-    "@modelcontextprotocol/sdk": "^1.32.1",
+    "@modelcontextprotocol/sdk": "^1.32.2",
     "zod": "^3.25.76"
   },
   "bin": {
