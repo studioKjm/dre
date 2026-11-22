@@ -9,7 +9,7 @@
     "@dre/app": "0.0.1",
     "@dre/core": "0.0.1",
     "@modelcontextprotocol/sdk": "^1.32.1",
-    "zod": "^3.25.76"
+    "zod": "^4.6.7"
   },
   "bin": {
     "dre-mcp": "dist/main.js"
