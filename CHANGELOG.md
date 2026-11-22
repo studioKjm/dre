@@ -7,6 +7,11 @@ new entries land under a version heading (see `docs/adr.yaml` ADR-011 for the pu
 ## [Unreleased]
 
 ### Changed
+- `packages/core` mutation score: 80.17% -> 84.84%, driven by `text.ts`'s score going from
+  56.67% to 83.33% (it was the weakest file called out when Stryker was first introduced).
+  14 new tests closed real gaps — entity-decoding table coverage, numeric entity precision,
+  and several block-tag regex cases that the first pass of tests accidentally masked by always
+  pairing them with another tag that supplied the same line break (see ADR-030)
 - AC-008 accuracy: 83.7% -> 87.4%, passing the 85% target for the first time. Driven by the
   three collector fixes below plus re-running the independent-labeler process (3 subagents with
   no access to benchmarks/gold/, one per weak target) on the newly-recovered evidence — see
