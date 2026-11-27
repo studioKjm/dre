@@ -26,6 +26,7 @@ export interface ToolServices {
   dart: Pick<Services["dart"], "collect">;
   priceHistory: Pick<Services["priceHistory"], "collect">;
   jobs: Pick<Services["jobs"], "collect">;
+  structuredData: Pick<Services["structuredData"], "collect">;
   reports: Pick<Services["reports"], "submit">;
 }
 
@@ -159,6 +160,18 @@ export function createDreServer(services: ToolServices): McpServer {
       inputSchema: jobsInput,
     },
     ({ slug }) => guarded(() => services.jobs.collect(slug)),
+  );
+
+  server.registerTool(
+    "collect_structured_data",
+    {
+      title: "Read schema.org structured data (JSON-LD)",
+      description:
+        "Fetch a page and read any schema.org Organization/Product JSON-LD it embeds in <script type=\"application/ld+json\"> — markup sites already publish for SEO, so there is no JS rendering involved and essentially no way for a site to block this without also breaking its own search-result rich snippets. Organization facts (name, foundingDate, numberOfEmployees, industry) are a useful proxy for company stage/size; Product facts (name, offers.price/priceCurrency/availability) are an independent check on pricing claims from collect_pricing. Coverage is inconsistent — most pages simply don't have this markup, which returns an empty 'items' with a warning, not an error. Only Organization and Product/Offer types are read; other schema.org types (ratings, breadcrumbs, FAQs) are ignored." +
+        FALLBACK,
+      inputSchema: collectInput,
+    },
+    ({ url }) => guarded(() => services.structuredData.collect(url)),
   );
 
   server.registerTool(

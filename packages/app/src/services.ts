@@ -30,6 +30,7 @@ import {
   PriceHistoryCollector,
   PricingCollector,
   ReportService,
+  StructuredDataCollector,
   TechStackCollector,
   TermsCollector,
   evaluate,
@@ -96,6 +97,7 @@ export function createServices(opts: ServiceOptions = {}) {
   const pricing = new PricingCollector(fetcher, policy, renderer, archive);
   const terms = new TermsCollector(fetcher, policy, archive);
   const techstack = new TechStackCollector(fetcher, policy);
+  const structuredData = new StructuredDataCollector(fetcher, policy, archive);
   const adlibrary = new AdLibraryCollector(renderer, policy);
   const edgar = new EdgarCollector({
     findCik: (n) => findCik(n, { userAgent: secUserAgent }),
@@ -124,6 +126,7 @@ export function createServices(opts: ServiceOptions = {}) {
     dart,
     priceHistory,
     jobs,
+    structuredData,
     company: new CompanyAnalyzer(pricing, terms, techstack, adlibrary),
     reports: new ReportService(store),
     /** 저장된 리포트 디렉터리와 정답표 디렉터리를 비교한다. */

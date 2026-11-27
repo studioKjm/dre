@@ -1,0 +1,167 @@
+# Seed Specification — collect_structured_data
+# Generated: 2026-11-25
+# Source Interview: .harness/ouroboros/interviews/2026-11-25-09-30.yaml
+# WARNING: This file is immutable. To change, create a new version
+# (seed-structured-data-v2.yaml), never edit this one.
+#
+# This is a feature-scoped seed, separate from the project-wide seed-v1.yaml
+# (DRE v0.1) — it adds one new collector alongside the existing 11 tools,
+# it does not revise the whole-project spec.
+
+version: 1
+created: "2026-11-25T09:45:00"
+interview_ref: ".harness/ouroboros/interviews/2026-11-25-09-30.yaml"
+
+goal:
+  summary: "Add collect_structured_data: a new MCP tool that reads schema.org Organization/Product/Offer JSON-LD already embedded in a page's HTML source."
+  detail: |
+    Many company homepages embed schema.org JSON-LD (<script type="application/ld+json">)
+    for SEO purposes — organization metadata (founding date, employee-count range,
+    industry) and product/offer data (price, currency, availability). This is
+    structured, machine-readable, publicly-served markup that requires no JS
+    rendering and carries essentially no blocking risk, since removing it would
+    hurt the site's own SEO. It gives the calling agent another evidence source
+    for business-model claims (e.g. company stage, enterprise-sales signals)
+    without any new bot-detection surface.
+  non_goals:
+    - "라벨(revenueModelLabels) 자동 추론 — DRE는 raw evidence만 반환한다 (ADR-003)"
+    - "AggregateRating, BreadcrumbList, FAQPage 등 Organization/Product/Offer 외 다른 schema.org 타입"
+    - "analyze_company 오케스트레이터에 통합 — 이번 라운드는 독립 도구로 끝낸다"
+    - "Microdata/RDFa 같은 JSON-LD 이외의 구조화 데이터 포맷"
+
+constraints:
+  must:
+    - "JSON-LD 파싱은 정적 fetch만 사용한다 — JS 렌더링(puppeteer) 불필요, 페이지 소스에 이미 있는 마크업이므로"
+    - "Organization과 Product/Offer 타입만 처리하고, 정의된 화이트리스트 필드만 추출한다"
+    - "홈페이지를 못 가져오면(bot-block-like 오류) archive.org로 폴백한다 — pricing.ts/terms.ts와 같은 패턴"
+    - "JSON-LD 블록이 여러 개이거나 하나가 파싱 실패해도 나머지는 계속 시도한다 (best-effort)"
+    - "결과는 기존 Collected<T> 형태(items/evidence/warnings)를 따른다 — 다른 수집기와 일관성 유지"
+    - "observed 타입 claim은 evidence가 있어야 한다는 스키마 규칙(packages/core/src/schema.ts)을 그대로 따른다"
+  must_not:
+    - "다른 수집기(techstack 등)와 fetch를 공유하지 않는다 — 각 수집기는 독립적으로 성공/실패를 보고한다는 기존 원칙 유지"
+    - "추출한 필드를 바탕으로 revenueModelLabels나 다른 claim 타입을 DRE가 직접 판단/반환하지 않는다"
+    - "robots.txt를 위반하거나 봇 차단을 우회하지 않는다 (ADR-004/005/008과 동일 원칙)"
+  should:
+    - "techstack.ts의 '이미 거기 있는 걸 읽는다' 철학과 pricing.ts/terms.ts의 archive 폴백 패턴을 그대로 재사용해 새 패턴을 만들지 않는다"
+
+acceptance_criteria:
+  - id: "AC-001"
+    description: "Organization JSON-LD가 있는 페이지에서, 화이트리스트 필드(name/foundingDate/numberOfEmployees/industry)가 채워진 item과 해당 URL을 가리키는 evidence를 반환한다"
+    verification: "automated"
+    priority: "must"
+    complexity: "medium"
+  - id: "AC-002"
+    description: "Product/Offer JSON-LD가 있는 페이지에서, 화이트리스트 필드(name/offers.price/offers.priceCurrency/offers.availability)가 채워진 item을 반환한다"
+    verification: "automated"
+    priority: "must"
+    complexity: "medium"
+  - id: "AC-003"
+    description: "JSON-LD가 전혀 없는 페이지에서는 items:[] + 명확한 경고와 함께 ok:true를 반환한다 (에러가 아니다)"
+    verification: "automated"
+    priority: "must"
+    complexity: "low"
+  - id: "AC-004"
+    description: "여러 JSON-LD 블록 중 하나가 깨진 JSON이어도, 나머지 유효한 블록은 정상적으로 추출된다"
+    verification: "automated"
+    priority: "must"
+    complexity: "medium"
+  - id: "AC-005"
+    description: "홈페이지 fetch가 봇 차단류 오류(FetchError kind \"http\")로 실패하면 archive.org 스냅샷으로 폴백해 그 스냅샷의 JSON-LD를 읽는다; 폴백도 실패하면 원래 오류를 그대로 던진다"
+    verification: "automated"
+    priority: "must"
+    complexity: "medium"
+  - id: "AC-006"
+    description: "실제 사이트 3곳(JSON-LD 있는 곳 / 없는 곳 / 봇 차단된 곳)에 대해 라이브로 돌려 기대한 동작을 확인한다"
+    verification: "manual"
+    priority: "must"
+    complexity: "medium"
+  - id: "AC-007"
+    description: "새 MCP 도구 collect_structured_data가 서버에 등록되어 도구 목록에 노출된다 (11개 → 12개)"
+    verification: "automated"
+    priority: "should"
+    complexity: "low"
+
+ontology:
+  entities:
+    - name: "OrganizationFact"
+      fields:
+        - { name: "name", type: "string", required: false }
+        - { name: "foundingDate", type: "string", required: false }
+        - { name: "numberOfEmployees", type: "string", required: false }
+        - { name: "industry", type: "string", required: false }
+      relationships: []
+    - name: "ProductOfferFact"
+      fields:
+        - { name: "name", type: "string", required: false }
+        - { name: "price", type: "string", required: false }
+        - { name: "priceCurrency", type: "string", required: false }
+        - { name: "availability", type: "string", required: false }
+      relationships: []
+  actions:
+    - name: "collectStructuredData"
+      actor: "calling agent (via MCP tool collect_structured_data)"
+      input: "home page URL"
+      output: "Collected<OrganizationFact | ProductOfferFact> — items[], evidence[], warnings[]"
+      side_effects:
+        - "하나의 외부 HTTP GET (대상 홈페이지, 또는 봇 차단 시 archive.org)"
+
+architecture:
+  pattern: "3-tier-layered"
+  layers:
+    presentation:
+      description: "MCP 도구 등록과 입력 스키마"
+      directories: ["packages/mcp/src"]
+      responsibilities:
+        - "collect_structured_data 도구를 server.ts에 등록"
+        - "schemas.ts에 입력 스키마(url) 정의"
+      cannot_access: ["database", "external_services"]
+    logic:
+      description: "JSON-LD 파싱(순수 함수)과 수집기 오케스트레이션(fetch+archive 폴백)"
+      directories: ["packages/logic/src", "packages/logic/src/collectors"]
+      responsibilities:
+        - "packages/logic/src/structured-data.ts: HTML에서 JSON-LD 블록을 찾아 Organization/Product/Offer를 화이트리스트 필드로 파싱하는 순수 함수 (techstack.ts의 detectTechStack과 같은 위치)"
+        - "packages/logic/src/collectors/structured-data.ts: fetch + archive.org 폴백 오케스트레이션 (pricing.ts/terms.ts와 같은 구조)"
+      cannot_access: []
+    data:
+      description: "기존 fetchPage/fetchFromWayback 재사용 — 이번 기능에 새 Data 레이어 코드는 없다"
+      directories: ["packages/data/src"]
+      responsibilities:
+        - "packages/data/src/fetcher.ts의 fetchPage (이미 존재, 신규 코드 없음)"
+        - "packages/data/src/wayback.ts의 fetchFromWayback (이미 존재, 신규 코드 없음)"
+      cannot_access: ["presentation"]
+  layer_communication:
+    presentation_to_logic: "MCP 서버 핸들러가 packages/app의 createServices()로 조립된 수집기를 직접 호출"
+    logic_to_data: "PageFetcher/PageArchive 포트 인터페이스 (packages/logic/src/ports.ts, 기존 패턴 재사용)"
+    data_format: "RawPage (기존 @dre/core 타입), Collected<T> (기존 packages/logic/src/types.ts 타입)"
+
+scope:
+  mvp:
+    - "packages/logic/src/structured-data.ts — JSON-LD 파싱 순수 함수 + 단위테스트"
+    - "packages/logic/src/collectors/structured-data.ts — fetch+archive 폴백 수집기 + 단위테스트"
+    - "packages/mcp/src/server.ts, schemas.ts — collect_structured_data 도구 등록"
+    - "packages/app/src/services.ts — DI 조립"
+    - "실제 사이트 3곳 라이브 검증 (JSON-LD 있음/없음/차단)"
+    - "README 도구 표, CONTRIBUTING.md(필요 시), CHANGELOG.md, docs/adr.yaml 갱신"
+  future:
+    - "analyze_company에 다섯 번째 병렬 호출로 포함 (별도 라운드)"
+    - "AggregateRating, BreadcrumbList 등 다른 schema.org 타입 지원"
+    - "Microdata/RDFa 등 JSON-LD 이외 구조화 데이터 포맷"
+
+tech_decisions:
+  - decision: "techstack과 합치지 않고 독립 MCP 도구(collect_structured_data)로 간다"
+    reason: "기술스택 신호(헤더/스크립트)와 비즈니스 메타데이터(직원수/가격)는 성격이 달라, 합치면 호출 에이전트가 '이 정보가 어디서 왔는지' 구분하기 어려워진다"
+    alternatives_considered:
+      - "collect_techstack에 통합"
+      - "analyze_company 전용 내부 헬퍼로만 존재"
+  - decision: "추출 필드는 화이트리스트 방식 — 스키마에 없는 필드는 버린다"
+    reason: "pricing.ts의 snapshot(전체 텍스트)과 items(파싱된 힌트) 분리 철학과 다르게, JSON-LD는 이미 구조화돼 있어 원문 그대로 반환해도 노이즈(무관한 필드)가 많다. 화이트리스트가 예측 가능한 결과를 준다"
+    alternatives_considered:
+      - "해당 타입의 전체 JSON을 그대로 반환"
+  - decision: "fetch는 독립 요청 — techstack 등 다른 수집기와 공유하지 않는다"
+    reason: "'각 수집기는 독립적으로 성공/실패를 보고한다'는 기존 설계 원칙(company-analyzer.ts 주석)과 일치시킨다. 공유하면 한쪽 실패가 양쪽에 영향을 준다"
+    alternatives_considered:
+      - "techstack과 같은 fetch 결과 재사용"
+  - decision: "봇 차단 시 archive.org 폴백 — pricing.ts/terms.ts와 같은 패턴 재사용"
+    reason: "JSON-LD는 응답 헤더(아카이브에 남지 않을 수 있는 techstack의 신호)와 달리 페이지 본문 구조라 archive.org 스냅샷에도 보존된다. 새 패턴을 만들 필요 없이 기존 걸 그대로 쓴다"
+    alternatives_considered:
+      - "폴백 없이 정직하게 실패 보고 (구 techstack 방식)"

@@ -1,0 +1,97 @@
+decomposition:
+  seed_ref: ".harness/ouroboros/seeds/seed-structured-data-v1.yaml"
+  trd_ref: "docs/TRD.md#10-addendum-2026-11-27-collect_structured_data-schemaorg-json-ld"
+  total_tasks: 9
+  notes:
+    - "T-001이 structured-data.ts 파일과 StructuredFact 타입을 만든다 — 그 다음 Logic 태스크들의 전제."
+    - "T-007(server.ts 등록)은 T-006(수집기 완성)까지 끝나야 설명/동작이 정확해지므로 의존을 건다. 단, 실제로 필요한 건 메서드 시그니처뿐이라 테스트는 가짜 구현체로 독립 실행 가능."
+    - "T-008(DI 조립)은 Presentation/Logic 둘 다 끝난 뒤에야 실제 연결 지점이 확정된다."
+  tasks:
+    # ── AC-001 ─────────────────────────────────────────
+    - id: "T-001"
+      ac_ref: "AC-001"
+      layer: "logic"
+      description: "packages/logic/src/structured-data.ts 신설 — JSON-LD <script> 블록 탐색 + Organization 타입 파싱(name/foundingDate/numberOfEmployees/industry). numberOfEmployees가 QuantitativeValue 객체면 \"min-max\" 문자열로 정규화. packages/logic/src/types.ts에 StructuredFact export 추가"
+      test: "Organization JSON-LD 하나짜리 HTML → 화이트리스트 필드가 채워진 StructuredFact(kind:organization) 반환. numberOfEmployees가 숫자/문자열/QuantitativeValue 세 형태 각각 정규화 확인"
+      depends_on: []
+      estimated_minutes: 25
+    # ── AC-002 ─────────────────────────────────────────
+    - id: "T-002"
+      ac_ref: "AC-002"
+      layer: "logic"
+      description: "structured-data.ts에 Product/Offer 타입 파싱 추가(name/offers.price/offers.priceCurrency/offers.availability). offers가 배열이면 첫 원소만 사용"
+      test: "Product+Offer JSON-LD → StructuredFact(kind:product) 반환. offers 배열의 두 번째 원소는 무시되는지 확인"
+      depends_on: ["T-001"]
+      estimated_minutes: 15
+    # ── AC-003 ─────────────────────────────────────────
+    - id: "T-003"
+      ac_ref: "AC-003"
+      layer: "logic"
+      description: "JSON-LD가 전혀 없거나 @type이 Organization/Product가 아닌 경우 빈 배열 + 명확한 경고 문자열을 반환하도록 structured-data.ts 정리(이미 자연스럽게 동작할 수 있으나 명시적 테스트·경고 문구로 확정)"
+      test: "<script type=application/ld+json> 자체가 없는 HTML → items:[] + warnings에 'no JSON-LD found' 류 문구. @type이 BreadcrumbList인 블록 → 무시"
+      depends_on: ["T-001"]
+      estimated_minutes: 10
+    # ── AC-004 ─────────────────────────────────────────
+    - id: "T-004"
+      ac_ref: "AC-004"
+      layer: "logic"
+      description: "여러 JSON-LD <script> 블록 중 하나가 깨진 JSON이어도 나머지는 계속 파싱하도록 블록별 try/catch 추가(best-effort)"
+      test: "유효한 Organization 블록 + 깨진 JSON 블록 + 유효한 Product 블록이 섞인 HTML → 유효한 두 개만 items에 포함, 경고는 선택적"
+      depends_on: ["T-001"]
+      estimated_minutes: 15
+    # ── AC-005 (수집기 본체) ──────────────────────────
+    - id: "T-005"
+      ac_ref: "AC-005"
+      layer: "logic"
+      description: "packages/logic/src/collectors/structured-data.ts 신설 — StructuredDataCollector 클래스. fetcher.get(url)로 홈페이지를 가져와 structured-data.ts의 파싱 함수를 호출하고 Collected<StructuredFact>로 반환(happy path만, 폴백 제외)"
+      test: "FakeFetcher로 Organization+Product가 섞인 HTML을 주입 → Collected<StructuredFact> 형태(items/evidence/warnings)로 정상 반환, evidence[0].url이 fetch한 URL과 일치"
+      depends_on: ["T-001", "T-002", "T-003", "T-004"]
+      estimated_minutes: 20
+    # ── AC-005 (archive 폴백) ─────────────────────────
+    - id: "T-006"
+      ac_ref: "AC-005"
+      layer: "logic"
+      description: "StructuredDataCollector에 pricing.ts/terms.ts와 같은 isBotBlockLike 판단 + archive.org 폴백 추가. 폴백도 실패하거나 봇차단류가 아니면 원래 오류를 그대로 던진다"
+      test: "FetchError(kind:http,403) → archive가 있으면 그 스냅샷으로 폴백해 파싱, 경고 문구 확인. archive 없으면 원래 에러 그대로 reject. kind:blocked(사설주소)는 폴백 안 함"
+      depends_on: ["T-005"]
+      estimated_minutes: 20
+    # ── AC-007 ─────────────────────────────────────────
+    - id: "T-007"
+      ac_ref: "AC-007"
+      layer: "presentation"
+      description: "packages/mcp/src/server.ts에 collect_structured_data 도구 등록(입력은 기존 collectInput 재사용), ToolServices 인터페이스에 structuredData 추가. FALLBACK 안내문 동일 적용"
+      test: "서버가 노출하는 도구 목록에 collect_structured_data 포함(기존 'exposes the N tools' 테스트 11→12 갱신). 가짜 구현체 주입 시 정상 결과/에러를 isError 결과로 변환하는지 확인"
+      depends_on: ["T-006"]
+      estimated_minutes: 20
+    # ── 조립(App DI) ──────────────────────────────────
+    - id: "T-008"
+      ac_ref: "AC-005"
+      layer: "app"
+      description: "packages/app/src/services.ts에서 기존 fetcher/archive를 재사용해 StructuredDataCollector를 조립하고 services.structuredData로 노출"
+      test: "createServices().structuredData.collect(url)이 타입 에러 없이 호출 가능 (단위테스트보다는 tsc 빌드 통과로 검증 — app 패키지는 얇은 조립 코드라 별도 테스트 없음, 기존 패턴과 동일)"
+      depends_on: ["T-006", "T-007"]
+      estimated_minutes: 10
+    # ── AC-006 (라이브 검증 + 문서화) ──────────────────
+    - id: "T-009"
+      ac_ref: "AC-006"
+      layer: "docs+manual"
+      description: "실제 사이트 3곳(JSON-LD 있음/없음/봇차단) 라이브 검증. README 도구 표(11→12), CHANGELOG.md, docs/adr.yaml 신규 ADR 작성"
+      test: "라이브 실행 결과가 기대한 ok:true/items/경고 패턴과 일치하는지 수동 확인(AC-006은 verification:manual)"
+      depends_on: ["T-008"]
+      estimated_minutes: 25
+
+  execution_order:
+    - phase: 1
+      tasks: ["T-001"]
+    - phase: 2
+      tasks: ["T-002", "T-003", "T-004"]
+    - phase: 3
+      tasks: ["T-005"]
+    - phase: 4
+      tasks: ["T-006"]
+    - phase: 5
+      tasks: ["T-007"]
+    - phase: 6
+      tasks: ["T-008"]
+    - phase: 7
+      tasks: ["T-009"]

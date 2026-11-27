@@ -105,3 +105,79 @@ docs/TRD.md
 - 결정: 조립 전용 패키지 `@dre/app`을 추가한다. `data`와 `logic`을 연결하는 유일한 곳이며 `cli`, `mcp`는 `app`과 `core`만 사용한다. 게이트 규칙으로 `cli`, `mcp`의 `@dre/data` import를 막는다.
 - 의존 방향: `cli, mcp → app → logic, data → core`. (`logic`은 `data`를 import하지 않고 포트로만 의존)
 - 브라우저: `puppeteer-core`는 24.x로 고정한다 (25.x는 Node >=22.12 필요, 본 프로젝트는 Node >=20). `BrowserUnavailable`은 Data와 Logic이 공유하므로 `core`에 둔다.
+
+## 10. Addendum (2026-11-27): `collect_structured_data` (schema.org JSON-LD)
+
+Seed: `.harness/ouroboros/seeds/seed-structured-data-v1.yaml` (프로젝트 전체 seed-v1과 별개 — 이 기능 전용).
+
+### 10.1 Layer Design
+
+| 레이어 | 모듈 | 책임 |
+|---|---|---|
+| Presentation (`@dre/mcp`) | `server.ts`에 `collect_structured_data` 도구 등록 | 입력은 기존 `collectInput`({url}) 재사용 — 새 스키마 불필요 |
+| Logic (`@dre/logic`) | `structured-data.ts` (순수 함수) | HTML에서 `<script type="application/ld+json">` 블록을 찾아 JSON.parse, `@type`이 `Organization`/`Product`인 것만 화이트리스트 필드로 변환. 블록 하나가 깨져도 나머지는 계속 처리(best-effort) |
+| Logic (`@dre/logic/collectors`) | `structured-data.ts` (`StructuredDataCollector` 클래스) | fetch → 파싱 → 봇 차단류 오류면 archive.org 폴백(pricing.ts/terms.ts와 동일 패턴: `isBotBlockLike` 재사용) |
+| Data (`@dre/data`) | 신규 코드 없음 | `fetchPage`, `fetchFromWayback` 기존 함수 그대로 재사용 |
+
+### 10.2 Ontology (결정됨)
+
+```ts
+// packages/logic/src/structured-data.ts
+export type StructuredFact =
+  | { kind: "organization"; name?: string; foundingDate?: string; numberOfEmployees?: string; industry?: string }
+  | { kind: "product"; name?: string; price?: string; priceCurrency?: string; availability?: string };
+```
+
+- `Organization`과 `Product`를 하나의 union(`StructuredFact`)으로 합치고 `kind` 필드로 구분한다 (논의 결과 — `Collected<T>`의 기존 `items: T[]` 패턴과 자연스럽게 맞물림).
+- `numberOfEmployees`가 `QuantitativeValue`({minValue,maxValue}) 객체면 `"${minValue}-${maxValue}"` 문자열로 정규화한다. 단순 숫자/문자열이면 그대로 문자열화. 둘 다 아니면 필드 생략.
+- `offers`가 배열이면 첫 번째 원소만 쓴다 (여러 SKU 전부를 다루는 건 이번 범위 밖 — seed의 non_goals와 일치).
+
+### 10.3 Layer Communication
+
+- Presentation → Logic: MCP 핸들러가 `services.structuredData.collect(url)` 직접 호출 (기존 `guarded()` 래퍼 재사용).
+- Logic → Data: `PageFetcher`/`PageArchive` 포트 (기존 `ports.ts`, 변경 없음).
+- 데이터 형식: `Collected<StructuredFact>` (기존 `types.ts`에 타입 추가).
+
+### 10.4 Directory Structure
+
+```
+packages/logic/src/
+  structured-data.ts         (신규, 순수 함수 — techstack.ts와 같은 위치)
+  structured-data.test.ts    (신규)
+  collectors/
+    structured-data.ts       (신규 — pricing.ts/terms.ts와 같은 구조)
+    structured-data.test.ts  (신규)
+  types.ts                   (수정 — StructuredFact export 추가)
+packages/mcp/src/
+  server.ts                  (수정 — 도구 등록 1개 추가, ToolServices에 structuredData 추가)
+  server.test.ts             (수정 — "exposes the eleven/twelve tools" 갱신)
+packages/app/src/
+  services.ts                (수정 — DI 조립 1줄 추가)
+```
+
+### 10.5 Test Strategy
+
+- Logic(`structured-data.ts` 순수 함수): 단위 테스트 — Organization만/Product만/둘 다/JSON-LD 없음/블록 하나 깨짐/QuantitativeValue 정규화. mock 없음.
+- Logic(`collectors/structured-data.ts`): 단위 테스트 — `FakeFetcher`/`PageArchive` 가짜 구현 주입(기존 `testing.ts` 패턴), 봇 차단→archive 폴백, 폴백도 실패 시 원래 에러 전파.
+- Presentation(`server.ts`): 기존 "exposes the N tools" 테스트 갱신 + 수집기 예외가 `isError` 결과로 변환되는지 확인(기존 패턴 재사용, 새 테스트 불필요할 수도 있음 — 기존 테스트가 이미 포괄적으로 커버).
+- 라이브 검증(AC-006, 자동화 테스트 아님): 실제 사이트 3곳 — JSON-LD 있는 곳 / 없는 곳 / 봇 차단된 곳(archive.org 폴백 경로 확인).
+
+### 10.6 Decisions & Trade-offs
+
+| 결정 | 근거 | 대가 |
+|---|---|---|
+| `techstack`과 별개 독립 도구 | 기술스택 신호와 비즈니스 메타데이터는 성격이 달라 합치면 출처 구분이 어려워짐 | 도구 개수 11→12, README 표 갱신 필요 |
+| 화이트리스트 필드만 추출 (원문 JSON 통째 반환 안 함) | 예측 가능한 결과, `pricing.ts`의 snapshot(원문)+items(힌트) 분리와는 다른 성격(JSON-LD는 이미 구조화돼 있어 원문 노이즈가 더 큼) | 화이트리스트 밖 필드는 유실 — 필요해지면 필드 추가 필요 |
+| fetch 독립 요청 (techstack과 공유 안 함) | "각 수집기는 독립적으로 성공/실패 보고" 원칙 유지 | 같은 페이지를 두 번 fetch (허용 가능한 비용) |
+| archive.org 폴백 재사용 | JSON-LD는 페이지 본문 구조라 아카이브에도 보존됨 (techstack의 응답 헤더와 다름) | 없음 — 기존 패턴 그대로 |
+| numberOfEmployees 정규화 (QuantitativeValue → 문자열) | 호출 에이전트가 필드 타입을 두 가지로 분기하지 않아도 됨 | 정규화 로직 약간 추가 |
+
+### 10.7 Implementation Order
+
+1. Logic: `structured-data.ts` 순수 파싱 함수 → 단위 테스트 (AC-001~004)
+2. Logic: `types.ts`에 `StructuredFact` 추가
+3. Logic: `collectors/structured-data.ts` (fetch+archive 폴백) → 단위 테스트 (AC-005)
+4. Presentation: `server.ts`에 도구 등록, `ToolServices`에 `structuredData` 추가 → 테스트 갱신 (AC-007)
+5. App: `services.ts` DI 조립
+6. 라이브 검증 3곳 (AC-006)
+7. 문서화: README 도구 표, CHANGELOG.md, docs/adr.yaml

@@ -1,0 +1,59 @@
+date: "2026-11-25T09:30:00"
+topic: "새 수집기: collect_structured_data (schema.org/JSON-LD Organization/Product/Offer)"
+mode: brownfield
+dimensions:
+  goal_clarity: 0.95
+  constraint_clarity: 0.90
+  success_criteria: 0.90
+  context_clarity: 0.75
+ambiguity_score: 0.10
+answers:
+  - question: "새 수집기로 어느 쪽을 잡을까요? (schema.org/JSON-LD vs GitHub org 활동 vs 둘 다 vs 제3의 아이디어)"
+    answer: "schema.org/JSON-LD 구조화 데이터"
+    dimension: "goal"
+    clarity_delta: +0.35
+  - question: "MCP 도구 구조에서 어떻게 노출할까요? (독립 새 도구 vs techstack 통합 vs analyze_company 전용)"
+    answer: "독립 새 도구: collect_structured_data"
+    dimension: "goal"
+    clarity_delta: +0.40
+  - question: "JSON-LD에서 어떤 schema.org 타입까지 읽을까요? (Organization+Product/Offer vs Organization만 vs 전 타입)"
+    answer: "Organization + Product/Offer"
+    dimension: "goal"
+    clarity_delta: +0.20
+  - question: "홈페이지 fetch를 어떻게 처리할까요? (독립 요청 vs techstack과 공유)"
+    answer: "독립 요청 — 각 수집기는 독립적으로 성공/실패 보고 원칙 유지"
+    dimension: "constraint"
+    clarity_delta: +0.30
+  - question: "봇 차단(403 등)으로 홈페이지를 못 가져올 때 어떻게 할까요?"
+    answer: "archive.org 폴백 (pricing/terms와 같은 패턴 재사용)"
+    dimension: "constraint"
+    clarity_delta: +0.30
+  - question: "JSON-LD 블록이 여러 개 있거나 파싱에 실패하면 어떻게 할까요?"
+    answer: "모두 시도, 개별 실패는 무시하고 계속 (best-effort)"
+    dimension: "constraint"
+    clarity_delta: +0.20
+  - question: "MVP 범위를 어디까지로 잡을까요?"
+    answer: "새 MCP 도구 1개(collect_structured_data) + 단위테스트 + 실제 사이트 3곳 검증. analyze_company 포함은 별도 라운드."
+    dimension: "success"
+    clarity_delta: +0.50
+  - question: "Organization/Product/Offer에서 구체적으로 어떤 필드를 뽑을까요?"
+    answer: "주요 필드만 화이트리스트: Organization(name/foundingDate/numberOfEmployees/industry), Product(name/offers.price/priceCurrency/availability)"
+    dimension: "success"
+    clarity_delta: +0.20
+  - question: "실제 사이트 검증은 몇 개 정도면 충분할까요?"
+    answer: "3개 — JSON-LD 있는 곳 / 없는 곳(빈 결과+경고) / 봇 차단된 곳(archive.org 폴백 경로)"
+    dimension: "success"
+    clarity_delta: +0.20
+decisions:
+  - "새 독립 MCP 도구 collect_structured_data로 간다 — collect_techstack(기술스택)과 성격이 달라 합치지 않는다"
+  - "스코프: schema.org Organization + Product/Offer 타입만. AggregateRating 등 다른 타입은 이번 라운드 제외"
+  - "추출 필드는 화이트리스트 방식 — 스키마에 없는 필드는 무시, 전체 JSON 원문 통째 반환은 안 함"
+  - "fetch는 독립 요청 (다른 수집기와 공유 안 함) — '각 수집기 독립 성공/실패' 기존 원칙 유지"
+  - "봇 차단 시 archive.org 폴백 — pricing.ts/terms.ts와 같은 패턴 재사용"
+  - "JSON-LD 블록 다수/파싱 실패는 best-effort — 하나 깨져도 나머지는 계속 시도"
+  - "DRE는 라벨을 추론하지 않는다(ADR-003) — 추출된 필드는 raw evidence로만 반환, revenueModelLabels 매핑은 호출 에이전트 몫"
+  - "analyze_company에 다섯 번째 호출로 포함시키는 건 이번 라운드 범위 밖 — 별도 작업으로 분리"
+assumptions_surfaced:
+  - "대부분 사이트는 schema.org JSON-LD가 아예 없을 수 있다 — '없음'이 정상적인 결과이지 에러가 아니다"
+  - "JSON-LD는 페이지 소스에 이미 박혀 있는 정적 마크업이라 JS 렌더링(puppeteer) 불필요 — 정적 fetch만으로 충분"
+  - "archive.org 스냅샷도 페이지 소스 자체를 보존하므로 JSON-LD가 대개 그대로 남아있다 (techstack의 '응답 헤더'와 달리 '본문 구조'라서 아카이브에도 유효)"

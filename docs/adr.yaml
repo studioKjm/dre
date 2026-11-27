@@ -930,3 +930,39 @@
     적은 다른 러너로 바꾸는 게 먼저다 — 지금 구조로 무작정 확장하는 건 비용 대비
     실익이 낮다고 판단해 손대지 않았다. logic/app/cli/mcp 확장도 같은 이유(pricing/
     adlibrary 등이 결국 puppeteer 경로에 닿는다)로 보류.
+
+- id: ADR-032
+  title: "새 수집기 collect_structured_data (schema.org JSON-LD) 추가"
+  status: adopted
+  date: 2026-11-27
+  stacks: [nodejs, typescript]
+  context: |
+    REA 비교/완성도 작업을 마치고 "해볼 만한 새 기능"을 검토하다가, 대부분 사이트가
+    SEO용으로 홈페이지에 심어두는 schema.org JSON-LD(<script type="application/
+    ld+json">)가 봇 차단과 무관한 공개 구조화 데이터라는 점에 주목했다. 이미 techstack.ts
+    가 "이미 거기 있는 걸 읽는다"는 철학으로 응답 헤더를 쓰고 있는 것과 같은 결의
+    데이터 소스다. /interview → /seed → /trd → /decompose를 거쳐
+    seed-structured-data-v1.yaml, docs/TRD.md §10, decomposition-structured-data-v1.yaml로
+    정리했다(프로젝트 전체 seed-v1과는 별개 — 기능 단위 seed).
+  decision: |
+    packages/logic/src/structured-data.ts: HTML에서 JSON-LD 블록을 찾아(CodeQL
+    js/polynomial-redos 교훈대로 속성부 [^>]를 2000자로 제한) Organization/Product
+    타입만 화이트리스트 필드로 변환하는 순수 함수. 블록 하나가 깨져도 나머지는 계속
+    처리(best-effort), @graph로 묶인 다중 노드도 지원. numberOfEmployees가
+    QuantitativeValue 객체({minValue,maxValue})면 "min-max" 문자열로 정규화.
+    packages/logic/src/collectors/structured-data.ts: pricing.ts/terms.ts와 똑같은
+    isBotBlockLike + archive.org 폴백 패턴(새 패턴을 만들지 않음) — JSON-LD는 응답
+    헤더(techstack)와 달리 페이지 본문 구조라 아카이브 스냅샷에도 보존된다(실측으로
+    canva.com 아카이브 스냅샷에서도 JSON-LD가 그대로 읽힘을 확인).
+    MCP 도구 collect_structured_data를 독립으로 등록했다(techstack과 합치지 않음 —
+    기술스택 신호와 비즈니스 메타데이터는 성격이 달라 출처 구분이 흐려진다는 판단,
+    인터뷰에서 논의). 입력 스키마는 기존 collectInput({url})을 그대로 재사용.
+    DRE는 라벨을 추론하지 않는다는 ADR-003 원칙 그대로, 화이트리스트 필드만 반환하고
+    revenueModelLabels 매핑은 하지 않는다.
+  consequence: |
+    실측 3곳 확인: stripe.com(JSON-LD 있음, Organization 추출), example.com(JSON-LD
+    없음, items:[] + 경고), canva.com(403 차단 → archive.org 폴백 성공, 아카이브
+    스냅샷에서도 Organization 추출). 테스트 12개 추가(197→209개 전체 통과). MCP 도구
+    11개→12개. analyze_company에 다섯 번째 병렬 호출로 포함시키는 것과 AggregateRating
+    등 다른 schema.org 타입 지원은 seed의 non_goals/future로 명시적으로 범위 밖에
+    남겨뒀다 — 다음 라운드로 미룬다.

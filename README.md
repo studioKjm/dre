@@ -8,7 +8,7 @@ business model, positioning, marketing, ads, tech stack, financials, and pricing
 with evidence and explicit uncertainty on every claim. The business-side counterpart to
 [REA](https://github.com/morluto/rea), which covers the technical side.
 
-> Status: pre-release. 11 MCP tools built and tested; AC-008 (independent accuracy benchmark,
+> Status: pre-release. 12 MCP tools built and tested; AC-008 (independent accuracy benchmark,
 > self-labeled by an independent subagent with no access to DRE's own reports) currently scores
 > 87.4%, passing the 85% target — see `.harness/ouroboros/evaluations/` for the full history and
 > `docs/adr.yaml` for the design decisions behind each feature.
@@ -41,6 +41,7 @@ Options:
 | `collect_financials_kr` | DART (Korean FSS) revenue/net income | high (free, needs your own API key) |
 | `collect_price_history` | pricing over time via archive.org snapshots | — (REA has no equivalent) |
 | `collect_jobs` | open postings via Greenhouse/Lever | very high |
+| `collect_structured_data` | schema.org Organization/Product JSON-LD (employee count, founding date, price) | very high (SEO markup — breaking it hurts the site's own search results) |
 | `submit_report` | validates and saves a claim-based report | — |
 
 ## Principles
@@ -93,7 +94,7 @@ See [`CONTRIBUTING.md`](CONTRIBUTING.md) for dev setup, the harness gates CI enf
 to add a collector. Security issues: [`SECURITY.md`](SECURITY.md). Changes: [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Roadmap
-- Done: pricing/terms/appstore/techstack/ad-library/financials(US+KR)/price-history/jobs
-  collectors, analyze_company orchestrator, npm packaging, multi-agent setup (Claude Code/
+- Done: pricing/terms/appstore/techstack/ad-library/financials(US+KR)/price-history/jobs/
+  structured-data collectors, analyze_company orchestrator, npm packaging, multi-agent setup (Claude Code/
   Cursor/Gemini CLI/Codex/Grok Build), CI (7 harness gates + build/test on Node 20/22)
 - Next: traffic/CPC/CTR/CVR/ROAS scenario estimates (user-supplied external API keys, stated assumptions — see non_goals in `.harness/ouroboros/seeds/seed-v1.yaml` for what DRE deliberately does not do)

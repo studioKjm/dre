@@ -15,6 +15,12 @@ new entries land under a version heading (see `docs/adr.yaml` ADR-011 for the pu
   from mutation, or a cheaper test runner) before this is worth attempting again
 
 ### Added
+- `collect_structured_data`: reads schema.org `Organization`/`Product` JSON-LD
+  (`<script type="application/ld+json">`) that sites already embed for SEO — employee-count
+  range, founding date, industry, and an independent price/currency/availability check against
+  `collect_pricing`. Static fetch only (no JS rendering needed), archive.org fallback on bot
+  blocks (same pattern as `collect_pricing`/`collect_terms`). 12th MCP tool. See ADR-032 and
+  `.harness/ouroboros/seeds/seed-structured-data-v1.yaml`
 - `.github/dependabot.yml` (npm workspace root + github-actions, weekly, minor/patch grouped)
   and `.github/ISSUE_TEMPLATE/` (bug report, feature request, security-report redirect) — repo
   hygiene that was just missing, not a design decision
